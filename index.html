@@ -1,0 +1,1656 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Organizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23fbfaf6'/%3E%3Cg transform='translate(32 32)' fill='%23e8bcc6'%3E%3Cellipse rx='8' ry='16' transform='translate(0 -13)'/%3E%3Cellipse rx='8' ry='16' transform='rotate(72) translate(0 -13)'/%3E%3Cellipse rx='8' ry='16' transform='rotate(144) translate(0 -13)'/%3E%3Cellipse rx='8' ry='16' transform='rotate(216) translate(0 -13)'/%3E%3Cellipse rx='8' ry='16' transform='rotate(288) translate(0 -13)'/%3E%3C/g%3E%3Ccircle cx='32' cy='32' r='6' fill='%238a6b55'/%3E%3C/svg%3E">
+  <!-- Chart.js for summary analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      /* Japanese Botanical Palette: Sakura, Lily of the Valley & Jasmine */
+      --sakura-50: #fdf2f8;
+      --sakura-100: #fce7f3;
+      --sakura-200: #fbcfe8;
+      --sakura-500: #ec4899;
+      --sakura-600: #db2777;
+      --sakura-700: #be185d;
+      
+      --jasmine-50: #fffbeb;
+      --jasmine-100: #fef3c7;
+      --jasmine-500: #d97706;
+      --jasmine-accent: #f59e0b;
+
+      --lily-50: #f0fdf4;
+      --lily-100: #dcfce7;
+      --lily-500: #22c55e;
+      --lily-700: #15803d;
+      --lily-dark: #14532d;
+
+      --bg: #faf7f8;
+      --surface: #ffffff;
+      --text-main: #27272a;
+      --text-muted: #71717a;
+      --border: #f3e8ee;
+      --radius: 14px;
+      --shadow: 0 4px 16px -2px rgba(219, 39, 119, 0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", sans-serif; }
+    body { background: var(--bg); color: var(--text-main); padding-bottom: 85px; }
+
+    /* Glassmorphism Header with Sakura & Jasmine Accents */
+    .top-header {
+      background: linear-gradient(135deg, rgba(253, 242, 248, 0.95), rgba(254, 243, 199, 0.9));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--sakura-200);
+      padding: 14px 18px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .top-row { display: flex; justify-content: space-between; align-items: center; }
+    .brand-title { font-size: 1.15rem; font-weight: 700; color: var(--sakura-700); display: flex; align-items: center; gap: 6px; }
+    .brand-subtitle { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+    
+    .year-select {
+      background: #ffffff;
+      border: 1px solid var(--sakura-200);
+      color: var(--sakura-700);
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 5px 10px;
+      border-radius: 20px;
+      outline: none;
+      box-shadow: 0 2px 5px rgba(219, 39, 119, 0.08);
+    }
+
+    /* Month Selector Strip */
+    .month-strip {
+      display: flex;
+      overflow-x: auto;
+      background: #ffffff;
+      padding: 10px 14px;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      scrollbar-width: none;
+    }
+    .month-strip::-webkit-scrollbar { display: none; }
+    .month-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--sakura-50);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .month-chip.active {
+      background: linear-gradient(135deg, var(--sakura-500), var(--sakura-600));
+      color: #ffffff;
+      box-shadow: 0 3px 8px rgba(219, 39, 119, 0.25);
+    }
+
+    .container { padding: 14px; max-width: 650px; margin: 0 auto; }
+
+    /* Money Manager Metric Cards */
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: 14px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .metric-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
+    .metric-val { font-size: 1rem; font-weight: 800; }
+    .val-income { color: var(--lily-700); }
+    .val-expense { color: var(--sakura-600); }
+    .val-bal { color: var(--jasmine-500); }
+
+    /* Schedule Category Cards */
+    .cat-box {
+      background: #ffffff;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .cat-head {
+      background: linear-gradient(90deg, var(--sakura-50), #ffffff);
+      border-left: 4px solid var(--sakura-500);
+      padding: 11px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--sakura-700);
+    }
+    .cat-head-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* Task Row */
+    .task-row {
+      padding: 11px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f9f5f7;
+    }
+    .task-row:last-child { border-bottom: none; }
+    .task-info { flex: 1; margin-right: 10px; }
+    .task-title-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .task-title { font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+    .task-edit-btn { background: none; border: none; font-size: 0.82rem; cursor: pointer; color: var(--text-muted); padding: 2px 4px; }
+    .task-edit-btn:hover { color: var(--sakura-600); }
+    .task-del-btn { background: none; border: none; font-size: 0.82rem; cursor: pointer; color: #ef4444; padding: 2px 4px; }
+    .task-del-btn:hover { color: #b91c1c; }
+
+    .completion-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--lily-100);
+      color: var(--lily-dark);
+      margin-top: 3px;
+    }
+
+    /* Status Badges */
+    .btn-status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .btn-status.done { background: var(--lily-100); color: var(--lily-dark); border-color: var(--lily-500); }
+    .btn-status.pending { background: var(--sakura-50); color: var(--sakura-600); border-color: var(--sakura-200); }
+
+    /* Money Manager Transaction Group */
+    .day-card {
+      background: #ffffff;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .day-head {
+      background: #faf8f9;
+      padding: 9px 14px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .day-spend { font-weight: 700; color: var(--sakura-600); }
+
+    .txn-item {
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f8f2f5;
+    }
+    .txn-item:last-child { border-bottom: none; }
+    .txn-badge {
+      font-size: 0.68rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--jasmine-100);
+      color: var(--jasmine-500);
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .txn-amt { font-weight: 800; font-size: 0.95rem; }
+
+    /* Floating Action Button */
+    .fab {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--sakura-500), var(--sakura-600));
+      color: #fff;
+      font-size: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      box-shadow: 0 6px 18px rgba(219, 39, 119, 0.35);
+      cursor: pointer;
+      z-index: 999;
+    }
+
+    /* Modals & Forms */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal.active { display: flex; }
+    .sheet {
+      background: #ffffff;
+      width: 100%;
+      max-width: 600px;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.1);
+    }
+    .sheet-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--sakura-700);
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .form-group { margin-bottom: 12px; }
+    label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px; }
+    input, select {
+      width: 100%;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+      background: #fff;
+    }
+    input:focus, select:focus { border-color: var(--sakura-500); }
+
+    .btn-main {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--sakura-500), var(--sakura-600));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(219, 39, 119, 0.2);
+    }
+
+    /* Bottom Nav */
+    .nav-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      gap: 3px;
+    }
+    .nav-item.active { color: var(--sakura-600); font-weight: 700; }
+    .nav-icon { font-size: 1.25rem; }
+
+    /* View visibility */
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+    .chart-box { position: relative; height: 260px; margin-top: 10px; }
+
+    /* Calm Sakura Garden theme */
+    :root{
+      --bg:#f7f6f0;--surface:#fffefa;--text-main:#3f463b;--text-muted:#7b8175;
+      --border:#e5e8df;--sakura-50:#fbf2f4;--sakura-100:#f7e5e9;--sakura-200:#edcdd5;
+      --sakura-500:#d59aa8;--sakura-600:#b97988;--sakura-700:#8e5d69;
+      --jasmine-50:#fffdf4;--jasmine-100:#f7f0d7;--jasmine-500:#98774c;--jasmine-accent:#b99867;
+      --lily-50:#f5f8f2;--lily-100:#e8efe2;--lily-500:#9caf8d;--lily-700:#687a5b;--lily-dark:#4f6048;
+      --olive:#748064;--brown:#826a58;--radius:18px;
+      --shadow:0 12px 32px rgba(67,80,59,.08),0 2px 8px rgba(76,59,45,.04)
+    }
+    html{scroll-behavior:smooth}
+    body{position:relative;min-height:100vh;overflow-x:hidden;background:
+      radial-gradient(circle at 8% 4%,rgba(232,188,198,.18),transparent 24%),
+      radial-gradient(circle at 95% 10%,rgba(132,153,113,.15),transparent 30%),
+      linear-gradient(150deg,#fff 0%,#fbfaf6 50%,#f1f4ed 100%);color:var(--text-main)}
+    body:before{content:"";position:fixed;inset:0;z-index:-4;pointer-events:none;opacity:.16;mix-blend-mode:multiply;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E")}
+    .garden-bg{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden}
+    .bamboo{position:absolute;right:-40px;top:2%;width:190px;height:92%;opacity:.13;transform-origin:bottom right;animation:sway 8s ease-in-out infinite alternate}
+    .stem{position:absolute;bottom:-4%;width:9px;height:104%;border-radius:8px;background:linear-gradient(90deg,#68775d,#aeba9d 55%,#667458);transform:rotate(var(--r));left:var(--x)}
+    .stem:before{content:"";position:absolute;inset:12% -2px auto;height:3px;background:#53634b;box-shadow:0 90px #53634b,0 180px #53634b,0 270px #53634b,0 360px #53634b,0 450px #53634b}
+    .leaf{position:absolute;width:64px;height:18px;border-radius:100% 0 100% 0;background:#728266;opacity:.9;transform-origin:0 50%;animation:leaf 5s ease-in-out infinite alternate}
+    .l1{right:65px;top:15%;transform:rotate(20deg)}.l2{right:20px;top:27%;transform:scaleX(-1) rotate(25deg)}.l3{right:78px;top:42%;transform:rotate(10deg)}.l4{right:16px;top:56%;transform:scaleX(-1) rotate(20deg)}.l5{right:82px;top:70%;transform:rotate(17deg)}
+    .petal{position:absolute;top:-8%;width:12px;height:8px;border-radius:80% 20% 75% 25%;background:linear-gradient(135deg,#f7dfe4,#dfaab6);opacity:.42;animation:fall linear infinite}
+    .petal:nth-child(1){left:5%;animation-duration:19s}.petal:nth-child(2){left:18%;animation-duration:24s;animation-delay:-11s}.petal:nth-child(3){left:35%;animation-duration:21s;animation-delay:-5s}.petal:nth-child(4){left:53%;animation-duration:27s;animation-delay:-19s}.petal:nth-child(5){left:69%;animation-duration:20s;animation-delay:-14s}.petal:nth-child(6){left:84%;animation-duration:26s;animation-delay:-7s}.petal:nth-child(7){left:96%;animation-duration:23s;animation-delay:-16s}
+    @keyframes fall{0%{translate:0 -10vh;rotate:0}40%{translate:35px 45vh;rotate:180deg}75%{translate:-15px 82vh;rotate:320deg}100%{translate:28px 115vh;rotate:470deg}}
+    @keyframes sway{from{transform:rotate(-1deg)}to{transform:rotate(1.8deg)}}
+    @keyframes leaf{from{margin-left:0}to{margin-left:6px}}
+    .top-header,.month-strip,.nav-bar{background:rgba(255,255,252,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand-title{color:var(--lily-dark)}.year-select{color:var(--lily-dark);border-color:#dce4d6}
+    .month-chip{background:#faf9f4;color:var(--brown);border:1px solid #ece9df}.month-chip.active{background:linear-gradient(135deg,#879878,#65765b);box-shadow:0 4px 12px rgba(84,105,74,.18)}
+    .cat-box,.day-card,.metric-strip{background:rgba(255,255,252,.9);border-color:rgba(224,229,218,.9);box-shadow:var(--shadow)}
+    .cat-head{background:linear-gradient(90deg,#eef3e9,#fffefa);border-left-color:#819274;color:#536449}
+    .btn-main{background:linear-gradient(135deg,#829273,#617157);box-shadow:0 5px 16px rgba(86,108,76,.18)}
+    .fab{background:linear-gradient(145deg,#f4d9df,#dba7b3);color:#654b52;border:2px solid #fff;box-shadow:0 8px 24px rgba(190,120,138,.25)}
+    .global-edit{display:inline-flex;align-items:center;gap:6px;background:#fffefa;border:1px solid #dbe2d5;color:#536449;padding:7px 11px;border-radius:10px;font-weight:700;cursor:pointer}
+    body:not(.edit-mode) .task-edit-btn,body:not(.edit-mode) .task-del-btn,body:not(.edit-mode) .cat-edit-controls{display:none!important}
+    .cat-edit-controls{display:inline-flex;gap:5px;margin-left:8px}.mini-edit{border:1px solid #dce3d6;background:#fff;color:#617157;border-radius:7px;padding:3px 6px;cursor:pointer}
+    .budget-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.budget-card{background:rgba(255,255,252,.92);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+    .budget-card h3{font-size:.9rem;color:var(--lily-dark);margin-bottom:10px}.budget-row{display:grid;grid-template-columns:1fr 120px;gap:9px;align-items:center;margin:8px 0}.budget-row input{padding:8px 10px}.progress{height:12px;background:#e9eee5;border-radius:999px;overflow:hidden;margin-top:7px}.progress>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#98b18a,#607955);transition:width .5s ease}.progress>span.over{background:linear-gradient(90deg,#d43f87,#a81967)}
+    .summary-list{display:grid;gap:8px}.summary-item{padding:10px 12px;background:#f8faf5;border:1px solid #e6ebe1;border-radius:11px;display:flex;justify-content:space-between;gap:10px}.summary-item strong{color:#56674d}.budget-actions{display:flex;gap:8px;margin:12px 0}.budget-actions button{width:auto;padding:9px 13px}.chart-box.small{height:220px}
+    @media(max-width:560px){.budget-grid{grid-template-columns:1fr}.budget-row{grid-template-columns:1fr 105px}.bamboo{opacity:.09;right:-75px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+
+    /* Per-tab botanical colour systems */
+    body.theme-schedule{--tab:#718464;--tab-deep:#4f6547;--tab-pale:#e8efe2;--anim-flower:#e7b9c4;--anim-leaf:#718464;--anim-stem:#52694a}
+    body.theme-expenses{--tab:#c88797;--tab-deep:#965d6b;--tab-pale:#f7e7eb;--anim-flower:#d98fa1;--anim-leaf:#9cae8c;--anim-stem:#718264}
+    body.theme-budget{--tab:#91705a;--tab-deep:#674b3b;--tab-pale:#f1e9e1;--anim-flower:#d6a6a0;--anim-leaf:#98856e;--anim-stem:#725944}
+    body.theme-stock{--tab:#cf8845;--tab-deep:#955d2f;--tab-pale:#f8ead9;--anim-flower:#df9a62;--anim-leaf:#a88b62;--anim-stem:#7f6849}
+    body.theme-charts{--tab:#748f83;--tab-deep:#4d695d;--tab-pale:#e4efea;--anim-flower:#d2a0ad;--anim-leaf:#748f83;--anim-stem:#526c60}
+    body{--tab:#718464;--tab-deep:#4f6547;--tab-pale:#e8efe2;--anim-flower:#e7b9c4;--anim-leaf:#718464;--anim-stem:#52694a;transition:background 1s ease,color .5s ease}
+    body.theme-schedule{background:radial-gradient(circle at 8% 5%,rgba(113,132,100,.15),transparent 28%),linear-gradient(150deg,#fff 0%,#faf9f3 52%,#eef3e9 100%)}
+    body.theme-expenses{background:radial-gradient(circle at 8% 5%,rgba(211,145,160,.20),transparent 29%),linear-gradient(150deg,#fff 0%,#fdf9f8 52%,#f8eaee 100%)}
+    body.theme-budget{background:radial-gradient(circle at 8% 5%,rgba(145,112,90,.16),transparent 29%),linear-gradient(150deg,#fff 0%,#fbf8f3 52%,#f0e8df 100%)}
+    body.theme-stock{background:radial-gradient(circle at 8% 5%,rgba(207,136,69,.18),transparent 29%),linear-gradient(150deg,#fff 0%,#fcf9f3 52%,#f7ead9 100%)}
+    body.theme-charts{background:radial-gradient(circle at 8% 5%,rgba(116,143,131,.17),transparent 29%),linear-gradient(150deg,#fff 0%,#f9faf7 52%,#e8f0ec 100%)}
+    body .month-chip.active,body .btn-main{background:linear-gradient(135deg,var(--tab),var(--tab-deep))}
+    body .cat-head{background:linear-gradient(90deg,var(--tab-pale),#fffefa);border-left-color:var(--tab);color:var(--tab-deep)}
+    body .nav-item.active{color:var(--tab-deep)}
+    body .year-select{color:var(--tab-deep);border-color:color-mix(in srgb,var(--tab) 28%,white)}
+    body .global-edit{color:var(--tab-deep);border-color:color-mix(in srgb,var(--tab) 28%,white)}
+    .sakura-branch{position:absolute;left:-25px;top:5%;width:190px;height:88%;opacity:.25;transform-origin:left center;animation:leftBranch 9s ease-in-out infinite alternate}
+    .sakura-branch:before{content:"";position:absolute;left:34px;top:0;width:8px;height:92%;border-radius:99%;background:linear-gradient(90deg,#665044,var(--brown),#705548);transform:rotate(-7deg)}
+    .sakura-branch:after{content:"✿  ❀\A   ❀  ✿\A ✿   ❀\A   ❀  ✿\A ✿  ❀\A  ❀   ✿";white-space:pre;position:absolute;left:6px;top:1%;font:40px/1.72 Georgia,serif;color:var(--anim-flower);text-shadow:55px 24px 0 color-mix(in srgb,var(--anim-flower) 80%,white),82px 86px 0 var(--anim-flower),36px 145px 0 color-mix(in srgb,var(--anim-flower) 75%,white);transition:color 1s ease}
+    .bamboo{opacity:.18}.stem{background:linear-gradient(90deg,var(--anim-stem),color-mix(in srgb,var(--anim-leaf) 55%,white) 55%,var(--anim-stem));transition:background 1s ease}.stem:before{background:var(--anim-stem);box-shadow:0 90px var(--anim-stem),0 180px var(--anim-stem),0 270px var(--anim-stem),0 360px var(--anim-stem),0 450px var(--anim-stem)}.leaf{background:var(--anim-leaf);transition:background 1s ease}
+    .petal{background:linear-gradient(135deg,color-mix(in srgb,var(--anim-flower) 55%,white),var(--anim-flower));transition:background 1s ease}
+    @keyframes leftBranch{from{transform:rotate(-1.1deg)}to{transform:rotate(1.3deg)}}
+    .money-add-icon{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:linear-gradient(145deg,#f4d8df,#dca9b5);color:#6b4b54;font-size:1.15rem;font-weight:800;box-shadow:0 4px 12px rgba(190,120,138,.22);border:1px solid white}
+    @media(max-width:560px){.sakura-branch{left:-72px;opacity:.17}.bamboo{right:-82px;opacity:.12}}
+
+  
+/* Lily of the Valley botanical luxury override */
+:root{--bg:#F7F9F6;--surface:#FFFFFF;--text-main:#1C2E24;--text-muted:#64786D;--border:#DDE8E1;--forest:#2D5A43;--forest-deep:#1F4533;--sage:#A8C3B4;--radius:20px;--shadow:0 15px 42px rgba(27,69,48,.08),0 2px 10px rgba(28,46,36,.04);--sakura-50:#F7F9F6;--sakura-100:#EAF1EC;--sakura-200:#CFE0D6;--sakura-500:#6F9782;--sakura-600:#3F7159;--sakura-700:#2D5A43;--jasmine-50:#FAFBF7;--jasmine-100:#F2F4E8;--jasmine-500:#617766;--jasmine-accent:#8DA594;--lily-50:#F7F9F6;--lily-100:#E7F0EA;--lily-500:#A8C3B4;--lily-700:#2D5A43;--lily-dark:#1F4533;--olive:#2D5A43;--brown:#536A5D}
+*{font-family:"Inter",system-ui,sans-serif}h1,h2,h3,.brand-title,.sheet-title,.cat-head>span:first-child{font-family:"Playfair Display",Georgia,serif}
+body,body.theme-schedule,body.theme-expenses,body.theme-budget,body.theme-stock,body.theme-charts{--tab:#2D5A43;--tab-deep:#1F4533;--tab-pale:#E7F0EA;background:radial-gradient(circle at 8% 5%,rgba(168,195,180,.18),transparent 27%),radial-gradient(circle at 94% 8%,rgba(45,90,67,.08),transparent 25%),linear-gradient(145deg,#FFFFFF 0%,#F7F9F6 50%,#F1F5F2 100%);color:#1C2E24}.garden-bg,.sakura-branch,.bamboo,.petal{display:none!important}
+.lily-scene{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden}.lily-cluster{position:absolute;bottom:45px;width:205px;height:74vh;opacity:.22;transform-origin:bottom center;animation:lilySway 10s ease-in-out infinite alternate}.lily-left{left:-48px}.lily-right{right:-48px;transform:scaleX(-1);animation-name:lilySwayR}.lv-stem{position:absolute;bottom:0;width:3px;border-radius:99px;background:linear-gradient(#5D856F,#2D5A43);transform-origin:bottom}.s1{left:72px;height:82%;transform:rotate(-7deg)}.s2{left:105px;height:91%;transform:rotate(3deg)}.s3{left:136px;height:76%;transform:rotate(10deg)}.lv-leaf{position:absolute;bottom:-12px;background:linear-gradient(110deg,#214A35,#5E876E 55%,#2D5A43);border-radius:100% 0 100% 0;transform-origin:bottom;box-shadow:inset 8px 0 rgba(255,255,255,.08)}.l1{left:28px;width:76px;height:330px;transform:rotate(-16deg)}.l2{left:86px;width:76px;height:370px;transform:rotate(7deg)}.l3{left:126px;width:58px;height:285px;transform:rotate(18deg)}.bell{position:absolute;width:19px;height:18px;background:linear-gradient(145deg,#fff,#F1F4E9);border:1px solid rgba(168,195,180,.7);border-radius:55% 55% 65% 65%;filter:drop-shadow(0 3px 3px rgba(45,90,67,.12));animation:bellBloom 4.5s ease-in-out infinite}.bell:after{content:"";position:absolute;left:3px;right:3px;bottom:-4px;height:7px;background:#fff;clip-path:polygon(0 0,25% 55%,50% 0,75% 55%,100% 0,100% 100%,0 100%);border-radius:0 0 50% 50%}.b1{left:48px;top:13%}.b2{left:58px;top:22%;animation-delay:-3s}.b3{left:87px;top:6%;animation-delay:-2s}.b4{left:101px;top:17%;animation-delay:-4s}.b5{left:132px;top:25%;animation-delay:-.5s}.b6{left:145px;top:35%;animation-delay:-2.5s}.jasmine-bloom{position:fixed;left:50%;top:88px;width:28px;height:28px;opacity:.28;animation:jasmineOpen 7s ease-in-out infinite}.jasmine-bloom i{position:absolute;left:10px;top:0;width:10px;height:17px;background:#fff;border:1px solid #DDE8E1;border-radius:70% 30% 60% 40%;transform-origin:5px 14px}.jasmine-bloom i:nth-child(2){transform:rotate(72deg)}.jasmine-bloom i:nth-child(3){transform:rotate(144deg)}.jasmine-bloom i:nth-child(4){transform:rotate(216deg)}.jasmine-bloom i:nth-child(5){transform:rotate(288deg)}.jasmine-bloom b{position:absolute;left:11px;top:11px;width:7px;height:7px;border-radius:50%;background:#A8C3B4}@keyframes lilySway{from{transform:rotate(-1.2deg)}to{transform:rotate(1.5deg)}}@keyframes lilySwayR{from{transform:scaleX(-1) rotate(-1.1deg)}to{transform:scaleX(-1) rotate(1.4deg)}}@keyframes bellBloom{0%,100%{transform:scale(.93) rotate(-2deg)}50%{transform:scale(1.05) rotate(2deg)}}@keyframes jasmineOpen{0%,100%{transform:scale(.72) rotate(-7deg);opacity:.14}50%{transform:scale(1.08) rotate(4deg);opacity:.34}}
+.top-header,.month-strip,.nav-bar{background:rgba(247,249,246,.92);border-color:rgba(168,195,180,.35)}.brand-title{color:#1F4533}.brand-subtitle{color:#617766}.cat-box,.day-card,.metric-strip,.budget-card{background:rgba(255,255,255,.95);border:1px solid #DDE8E1;box-shadow:var(--shadow)}.cat-head{background:linear-gradient(90deg,#E7F0EA,#fff);border-left-color:#2D5A43;color:#1F4533}.task-row,.txn-item{border-bottom-color:#EEF3EF}.task-title{color:#1C2E24}.month-chip{background:#fff;color:#536A5D;border-color:#DDE8E1}.month-chip.active{background:#2D5A43;color:#fff;box-shadow:0 5px 15px rgba(45,90,67,.2)}.nav-item.active{color:#1F4533;position:relative}.nav-item.active:after{content:"❧";position:absolute;bottom:-12px;font-size:15px;color:#A8C3B4;transform:rotate(-10deg)}.btn-main,.fab{background:#fff;color:#2D5A43;border:1px solid #2D5A43;box-shadow:0 6px 18px rgba(45,90,67,.10)}.btn-main:hover,.fab:hover{background:#2D5A43;color:#fff;transform:translateY(-2px)}.btn-status.done{background:#E7F0EA;color:#1F4533;border-color:#A8C3B4}.btn-status.pending{background:#fff;color:#2D5A43;border-color:#A8C3B4}.completion-tag{background:#E7F0EA;color:#1F4533}.txn-badge{background:#F2F4E8;color:#536A5D}.val-income,.val-bal{color:#2D5A43}.val-expense{color:#536A5D}input:focus,select:focus{border-color:#2D5A43;box-shadow:0 0 0 3px rgba(168,195,180,.22)}.progress>span{background:linear-gradient(90deg,#A8C3B4,#2D5A43)}.progress>span.over{background:linear-gradient(90deg,#8B7655,#5F4C34)}.money-add-icon{background:#fff;color:#2D5A43;border-color:#A8C3B4;box-shadow:0 4px 12px rgba(45,90,67,.12)}@media(max-width:560px){.lily-cluster{opacity:.12}.lily-left{left:-100px}.lily-right{right:-100px}}
+
+
+/* Mood-board motion and per-tab botanical shades */
+body.theme-schedule{--tab:#2D5A43;--tab-deep:#183D2B;--tab-pale:#E5EFE8;--scene-leaf:#2D5A43;--scene-leaf-light:#6F9782;--scene-wash:rgba(45,90,67,.14)}
+body.theme-expenses{--tab:#547A64;--tab-deep:#315843;--tab-pale:#EAF2ED;--scene-leaf:#416B54;--scene-leaf-light:#8FB09D;--scene-wash:rgba(84,122,100,.14)}
+body.theme-stock{--tab:#7A8060;--tab-deep:#545A3D;--tab-pale:#F0F1E7;--scene-leaf:#68704D;--scene-leaf-light:#A8AF8B;--scene-wash:rgba(122,128,96,.14)}
+body.theme-budget{--tab:#786653;--tab-deep:#514335;--tab-pale:#F1ECE5;--scene-leaf:#665747;--scene-leaf-light:#A79785;--scene-wash:rgba(120,102,83,.14)}
+body.theme-charts{--tab:#3F6B63;--tab-deep:#274D46;--tab-pale:#E5EFED;--scene-leaf:#315F57;--scene-leaf-light:#83A8A0;--scene-wash:rgba(63,107,99,.14)}
+body{--scene-leaf:#2D5A43;--scene-leaf-light:#6F9782;--scene-wash:rgba(45,90,67,.14);transition:background 1.1s ease}
+body.theme-schedule,body.theme-expenses,body.theme-stock,body.theme-budget,body.theme-charts{background:radial-gradient(circle at 8% 7%,var(--scene-wash),transparent 29%),radial-gradient(circle at 94% 10%,color-mix(in srgb,var(--scene-leaf-light) 17%,transparent),transparent 27%),linear-gradient(145deg,#fff 0%,#F7F9F6 52%,var(--tab-pale) 100%)}
+.lily-cluster{opacity:.27;filter:drop-shadow(0 16px 16px rgba(31,69,51,.08));animation-duration:7.5s;animation-timing-function:cubic-bezier(.45,.05,.55,.95)}
+.lv-stem{background:linear-gradient(var(--scene-leaf-light),var(--scene-leaf));transition:background 1s ease;animation:stemFlex 5.8s ease-in-out infinite alternate}
+.lv-leaf{background:linear-gradient(110deg,color-mix(in srgb,var(--scene-leaf) 82%,#183D2B),var(--scene-leaf-light) 55%,var(--scene-leaf));transition:background 1s ease;animation:leafWind 4.8s ease-in-out infinite alternate}
+.lily-cluster .l1{animation-delay:-1.2s}.lily-cluster .l2{animation-delay:-3.1s}.lily-cluster .l3{animation-delay:-2s}
+.bell{animation:bellWind 3.6s ease-in-out infinite;transform-origin:50% -10px}.b2,.b5{animation-delay:-1.3s}.b3,.b6{animation-delay:-2.4s}.b4{animation-delay:-.7s}
+.flower-rain{position:absolute;inset:0;overflow:hidden}.falling-lily{position:absolute;top:-12vh;width:18px;height:17px;background:linear-gradient(145deg,#fff,#EDF3ED);border:1px solid rgba(168,195,180,.67);border-radius:55% 55% 70% 70%;filter:drop-shadow(0 3px 4px rgba(45,90,67,.12));opacity:.72;animation:flowerFall linear infinite}
+.falling-lily:after{content:"";position:absolute;left:3px;right:3px;bottom:-4px;height:7px;background:#fff;clip-path:polygon(0 0,25% 58%,50% 0,75% 58%,100% 0,100% 100%,0 100%);border-radius:0 0 50% 50%}
+.falling-lily:nth-child(1){left:7%;animation-duration:18s;animation-delay:-4s}.falling-lily:nth-child(2){left:19%;animation-duration:23s;animation-delay:-16s;transform:scale(.75)}.falling-lily:nth-child(3){left:33%;animation-duration:20s;animation-delay:-9s;transform:scale(.9)}.falling-lily:nth-child(4){left:48%;animation-duration:26s;animation-delay:-21s;transform:scale(.65)}.falling-lily:nth-child(5){left:62%;animation-duration:19s;animation-delay:-12s}.falling-lily:nth-child(6){left:76%;animation-duration:24s;animation-delay:-6s;transform:scale(.8)}.falling-lily:nth-child(7){left:88%;animation-duration:22s;animation-delay:-19s;transform:scale(.7)}.falling-lily:nth-child(8){left:96%;animation-duration:27s;animation-delay:-14s;transform:scale(.95)}
+.watercolor-haze{position:absolute;inset:-10%;opacity:.22;background:radial-gradient(ellipse at 18% 55%,var(--scene-leaf-light),transparent 18%),radial-gradient(ellipse at 83% 41%,var(--scene-leaf),transparent 18%),radial-gradient(ellipse at 50% 90%,var(--tab-pale),transparent 28%);filter:blur(42px);animation:hazeDrift 14s ease-in-out infinite alternate;transition:background 1s ease}
+@keyframes flowerFall{0%{translate:0 -12vh;rotate:0deg}30%{translate:42px 32vh;rotate:130deg}62%{translate:-25px 69vh;rotate:270deg}100%{translate:35px 116vh;rotate:480deg}}
+@keyframes stemFlex{from{margin-left:-2px;filter:brightness(.96)}to{margin-left:4px;filter:brightness(1.04)}}
+@keyframes leafWind{0%{scale:1;translate:0 0}45%{scale:1.015;translate:5px -2px}100%{scale:.99;translate:-2px 1px}}
+@keyframes bellWind{0%,100%{transform:rotate(-5deg) scale(.94)}50%{transform:rotate(7deg) scale(1.05)}}
+@keyframes hazeDrift{from{transform:translate3d(-2%,0,0) scale(1)}to{transform:translate3d(3%,-2%,0) scale(1.08)}}
+.tab-view.active{animation:flowerOpen .58s cubic-bezier(.2,.75,.25,1) both}@keyframes flowerOpen{from{opacity:0;transform:translateY(10px) scale(.985);filter:blur(2px)}to{opacity:1;transform:none;filter:blur(0)}}
+body .month-chip.active,body .btn-main:hover,body .fab:hover{background:var(--tab);border-color:var(--tab);color:#fff}body .cat-head{background:linear-gradient(90deg,var(--tab-pale),#fff);border-left-color:var(--tab);color:var(--tab-deep)}body .nav-item.active{color:var(--tab-deep)}body .global-edit{color:var(--tab-deep);border-color:color-mix(in srgb,var(--tab) 28%,white)}
+@media(max-width:560px){.lily-cluster{opacity:.16}.falling-lily{opacity:.48}}
+
+
+/* Final tab colours, bamboo, petals, raindrops and music control */
+body.theme-schedule{--tab:#2D5A43;--tab-deep:#1E4633;--tab-pale:#E5EFE8;--scene-wash:rgba(45,90,67,.15)}
+body.theme-expenses{--tab:#6D3434;--tab-deep:#502323;--tab-pale:#F1E7E5;--scene-wash:rgba(109,52,52,.13)}
+body.theme-stock{--tab:#A8C3B4;--tab-deep:#4C6A5A;--tab-pale:#EDF4F0;--scene-wash:rgba(168,195,180,.21)}
+body.theme-budget{--tab:#C87A53;--tab-deep:#884B31;--tab-pale:#F7ECE5;--scene-wash:rgba(200,122,83,.15)}
+body.theme-charts{--tab:#1C2E24;--tab-deep:#101F17;--tab-pale:#E6ECE8;--scene-wash:rgba(28,46,36,.13)}
+.bamboo-backdrop{position:absolute;right:-28px;top:0;width:170px;height:100vh;opacity:.105;transform-origin:bottom right;animation:bambooWind 7s ease-in-out infinite alternate}.bamboo-cane{position:absolute;bottom:-4%;width:9px;height:108%;border-radius:7px;background:linear-gradient(90deg,var(--tab-deep),color-mix(in srgb,var(--tab) 56%,white),var(--tab-deep));transform:rotate(var(--r));left:var(--x)}.bamboo-cane:after{content:"";position:absolute;inset:12% -2px auto;height:3px;background:var(--tab-deep);box-shadow:0 88px var(--tab-deep),0 176px var(--tab-deep),0 264px var(--tab-deep),0 352px var(--tab-deep),0 440px var(--tab-deep)}.bamboo-leaf{position:absolute;width:65px;height:18px;border-radius:100% 0 100% 0;background:var(--tab);transform-origin:0 50%;animation:bLeaf 4s ease-in-out infinite alternate}.bl1{right:55px;top:15%;transform:rotate(18deg)}.bl2{right:12px;top:29%;transform:scaleX(-1) rotate(22deg)}.bl3{right:70px;top:45%;transform:rotate(11deg)}.bl4{right:15px;top:61%;transform:scaleX(-1) rotate(19deg)}.bl5{right:78px;top:77%;transform:rotate(16deg)}
+.rain-field,.petal-field-final{position:absolute;inset:0;overflow:hidden}.rain-drop{position:absolute;top:-15%;width:1px;height:26px;background:linear-gradient(transparent,rgba(91,132,111,.42));opacity:.38;animation:rainFall linear infinite}.rain-drop:nth-child(1){left:11%;animation-duration:2.8s}.rain-drop:nth-child(2){left:25%;animation-duration:3.4s;animation-delay:-2s}.rain-drop:nth-child(3){left:39%;animation-duration:2.5s;animation-delay:-1s}.rain-drop:nth-child(4){left:54%;animation-duration:3.1s;animation-delay:-2.4s}.rain-drop:nth-child(5){left:68%;animation-duration:2.7s;animation-delay:-.8s}.rain-drop:nth-child(6){left:81%;animation-duration:3.5s;animation-delay:-1.7s}.rain-drop:nth-child(7){left:94%;animation-duration:2.9s;animation-delay:-2.2s}
+.white-petal{position:absolute;top:-10%;width:13px;height:9px;border-radius:80% 20% 75% 25%;background:linear-gradient(135deg,#fff,#E4EEE8);border:1px solid rgba(168,195,180,.5);opacity:.64;animation:whitePetal linear infinite}.white-petal:nth-child(1){left:8%;animation-duration:18s}.white-petal:nth-child(2){left:27%;animation-duration:24s;animation-delay:-13s}.white-petal:nth-child(3){left:46%;animation-duration:20s;animation-delay:-7s}.white-petal:nth-child(4){left:65%;animation-duration:26s;animation-delay:-20s}.white-petal:nth-child(5){left:84%;animation-duration:22s;animation-delay:-11s}.white-petal:nth-child(6){left:96%;animation-duration:28s;animation-delay:-17s}
+.music-control{position:fixed;right:18px;top:82px;z-index:1100;display:flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid color-mix(in srgb,var(--tab) 32%,white);border-radius:999px;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);color:var(--tab-deep);font-weight:700;font-size:.72rem;cursor:pointer;box-shadow:0 7px 22px rgba(28,46,36,.09);transition:.3s}.music-control:hover,.music-control.playing{background:var(--tab);color:#fff}.music-dot{width:7px;height:7px;border-radius:50%;background:currentColor}.music-control.playing .music-dot{animation:musicPulse 1.5s ease-in-out infinite}
+@keyframes bambooWind{from{transform:rotate(-1.4deg)}to{transform:rotate(1.8deg)}}@keyframes bLeaf{from{margin-left:0;filter:brightness(.96)}to{margin-left:7px;filter:brightness(1.08)}}@keyframes rainFall{to{translate:-30px 125vh}}@keyframes whitePetal{0%{translate:0 -10vh;rotate:0}40%{translate:36px 45vh;rotate:170deg}75%{translate:-18px 82vh;rotate:310deg}100%{translate:26px 115vh;rotate:480deg}}@keyframes musicPulse{50%{transform:scale(1.65);opacity:.45}}
+.edit-budget-note{font-size:.7rem;color:var(--text-muted);margin:5px 0 9px}.account-budget-inputs{margin-top:10px}.editable-spend{display:grid;grid-template-columns:1fr 105px;gap:8px;align-items:center;margin-top:7px}.editable-spend input{padding:7px 9px}
+@media(max-width:560px){.music-control{top:78px;right:9px;padding:6px 9px}.bamboo-backdrop{right:-82px;opacity:.075}.rain-drop{opacity:.25}}
+
+
+/* Calm bamboo-only background with tab-responsive petals */
+.lily-cluster,.jasmine-bloom,.flower-rain,.falling-lily,.watercolor-haze,.rain-field,.rain-drop{display:none!important}
+.lily-scene{z-index:-2}
+.bamboo-backdrop{display:block!important;opacity:.16;transition:filter 1s ease,opacity 1s ease}
+.bamboo-cane{background:linear-gradient(90deg,var(--tab-deep),color-mix(in srgb,var(--tab) 55%,white),var(--tab-deep));transition:background 1s ease}
+.bamboo-cane:after{background:var(--tab-deep);box-shadow:0 88px var(--tab-deep),0 176px var(--tab-deep),0 264px var(--tab-deep),0 352px var(--tab-deep),0 440px var(--tab-deep);transition:background 1s ease,box-shadow 1s ease}
+.bamboo-leaf{background:var(--tab);transition:background 1s ease}
+.petal-field-final{display:block!important}
+.white-petal{background:linear-gradient(135deg,color-mix(in srgb,var(--tab-pale) 78%,white),color-mix(in srgb,var(--tab) 40%,white));border-color:color-mix(in srgb,var(--tab) 38%,white);filter:drop-shadow(0 3px 4px color-mix(in srgb,var(--tab) 18%,transparent));transition:background 1s ease,border-color 1s ease}
+body.theme-schedule .bamboo-backdrop{opacity:.20}body.theme-expenses .bamboo-backdrop{opacity:.14}body.theme-stock .bamboo-backdrop{opacity:.18}body.theme-budget .bamboo-backdrop{opacity:.14}body.theme-charts .bamboo-backdrop{opacity:.18}
+.music-control{border-color:color-mix(in srgb,var(--tab) 35%,white);color:var(--tab-deep)}
+.music-control:hover,.music-control.playing{background:var(--tab);border-color:var(--tab);color:#fff}
+@keyframes bambooWind{0%{transform:rotate(-1.5deg) translateX(-2px)}45%{transform:rotate(.4deg) translateX(2px)}100%{transform:rotate(1.9deg) translateX(5px)}}
+@keyframes bLeaf{0%{margin-left:-2px;transform-origin:0 50%;filter:brightness(.96)}50%{margin-left:4px;filter:brightness(1.03)}100%{margin-left:8px;filter:brightness(1.08)}}
+
+
+/* Final navigation palette and twin bamboo garden */
+body.theme-schedule{--tab:#2D5A43;--tab-deep:#1E4633;--tab-pale:#E5EFE8;--scene-wash:rgba(45,90,67,.15)}
+body.theme-expenses{--tab:#6D3434;--tab-deep:#502323;--tab-pale:#F1E7E5;--scene-wash:rgba(109,52,52,.13)}
+body.theme-stock{--tab:#C87A53;--tab-deep:#884B31;--tab-pale:#F7ECE5;--scene-wash:rgba(200,122,83,.15)}
+body.theme-budget{--tab:#476219;--tab-deep:#30440F;--tab-pale:#EEF3E5;--scene-wash:rgba(71,98,25,.16)}
+body.theme-charts{--tab:#1C2E24;--tab-deep:#101F17;--tab-pale:#E6ECE8;--scene-wash:rgba(28,46,36,.13)}
+.bamboo-backdrop.bamboo-left{left:-28px;right:auto;transform:scaleX(-1);transform-origin:bottom left;animation-name:bambooWindLeft}
+@keyframes bambooWindLeft{0%{transform:scaleX(-1) rotate(-1.5deg) translateX(-2px)}45%{transform:scaleX(-1) rotate(.4deg) translateX(2px)}100%{transform:scaleX(-1) rotate(1.9deg) translateX(5px)}}
+.limit-text{color:#6D3434!important}.progress>span.over{background:linear-gradient(90deg,#8E4A4A,#6D3434)!important}
+.add-account-panel{margin-top:12px;padding-top:12px;border-top:1px solid #DDE8E1}.add-account-row{display:grid;grid-template-columns:1fr 105px auto;gap:7px;align-items:center}.add-account-row input{padding:8px 9px}.add-account-btn{padding:9px 11px;border:1px solid var(--tab);border-radius:10px;background:#fff;color:var(--tab-deep);font-weight:700;cursor:pointer}.add-account-btn:hover{background:var(--tab);color:#fff}.remove-account-btn{border:0;background:transparent;color:#6D3434;font-size:.72rem;font-weight:700;cursor:pointer;margin-left:7px}
+.nav-icon.botanical{font-size:1.35rem;line-height:1}.nav-item span:last-child{white-space:nowrap}
+@media(max-width:560px){.bamboo-backdrop.bamboo-left{left:-82px}.add-account-row{grid-template-columns:1fr 90px}.add-account-btn{grid-column:1/-1}.nav-item{font-size:.62rem}}
+
+
+/* Enhanced twin bamboo garden, exact tab palette, and dark mode */
+body.theme-schedule{--tab:#2D5A43;--tab-deep:#1E4633;--tab-pale:#E5EFE8;--scene-wash:rgba(45,90,67,.15)}
+body.theme-expenses{--tab:#6D3434;--tab-deep:#502323;--tab-pale:#F1E7E5;--scene-wash:rgba(109,52,52,.13)}
+body.theme-budget{--tab:#476219;--tab-deep:#30440F;--tab-pale:#EEF3E5;--scene-wash:rgba(71,98,25,.16)}
+body.theme-stock{--tab:#C87A53;--tab-deep:#884B31;--tab-pale:#F7ECE5;--scene-wash:rgba(200,122,83,.15)}
+body.theme-charts{--tab:#1C2E24;--tab-deep:#101F17;--tab-pale:#E6ECE8;--scene-wash:rgba(28,46,36,.13)}
+.bamboo-backdrop{width:245px;opacity:.19}
+.bamboo-backdrop.bamboo-left{left:-42px}.bamboo-backdrop:not(.bamboo-left){right:-42px}
+.theme-toggle{position:fixed;left:18px;top:82px;z-index:1101;border:1px solid color-mix(in srgb,var(--tab) 32%,white);border-radius:999px;background:rgba(255,255,255,.9);color:var(--tab-deep);padding:7px 11px;font-weight:700;font-size:.72rem;cursor:pointer;box-shadow:0 7px 22px rgba(28,46,36,.09);backdrop-filter:blur(12px)}
+body.dark-mode{--bg:#111914;--surface:#18251D;--text-main:#EEF5F0;--text-muted:#AEBDB4;--border:#31463A;background:radial-gradient(circle at 8% 7%,color-mix(in srgb,var(--tab) 22%,transparent),transparent 30%),linear-gradient(145deg,#0E1511,#17231B 55%,#101812)!important;color:var(--text-main)}
+body.dark-mode .top-header,body.dark-mode .month-strip,body.dark-mode .nav-bar{background:rgba(18,29,22,.93);border-color:#31463A}
+body.dark-mode .cat-box,body.dark-mode .day-card,body.dark-mode .metric-strip,body.dark-mode .budget-card,body.dark-mode .sheet,body.dark-mode .task-row{background:rgba(24,37,29,.96)!important;border-color:#31463A;color:var(--text-main)}
+body.dark-mode .cat-head{background:linear-gradient(90deg,color-mix(in srgb,var(--tab) 24%,#18251D),#18251D);color:#F3F7F4}
+body.dark-mode input,body.dark-mode select,body.dark-mode .month-chip,body.dark-mode .summary-item{background:#111B15;color:#EEF5F0;border-color:#3B5144}
+body.dark-mode .task-title,body.dark-mode .metric-val,body.dark-mode .sheet-title{color:#EEF5F0}
+body.dark-mode .theme-toggle,body.dark-mode .music-control{background:rgba(24,37,29,.92);color:#F4F7F5;border-color:#4B6254}
+body.dark-mode .limit-text{color:#D69B9B!important}
+@media(max-width:560px){.theme-toggle{left:8px;top:78px;padding:6px 9px}.bamboo-backdrop.bamboo-left{left:-116px}.bamboo-backdrop:not(.bamboo-left){right:-116px}}
+
+
+/* Layered watercolor bamboo garden and editing controls */
+.bamboo-layer-back{opacity:.09!important;filter:blur(.7px) saturate(.75);scale:1.16;animation-duration:11s!important}.bamboo-left.bamboo-layer-back{left:-78px!important}.bamboo-backdrop:not(.bamboo-left).bamboo-layer-back{right:-78px!important}.bamboo-cane:nth-child(2n){opacity:.72}.bamboo-cane:nth-child(3n){filter:blur(.35px)}
+.white-petal{opacity:.58}.white-petal:nth-child(7){left:14%;animation-duration:29s;animation-delay:-8s}.white-petal:nth-child(8){left:22%;animation-duration:17s;animation-delay:-15s}.white-petal:nth-child(9){left:35%;animation-duration:25s;animation-delay:-3s}.white-petal:nth-child(10){left:41%;animation-duration:21s;animation-delay:-18s}.white-petal:nth-child(11){left:53%;animation-duration:30s;animation-delay:-12s}.white-petal:nth-child(12){left:59%;animation-duration:19s;animation-delay:-5s}.white-petal:nth-child(13){left:71%;animation-duration:27s;animation-delay:-22s}.white-petal:nth-child(14){left:77%;animation-duration:23s;animation-delay:-10s}.white-petal:nth-child(15){left:89%;animation-duration:31s;animation-delay:-17s}.white-petal:nth-child(16){left:3%;animation-duration:26s;animation-delay:-20s;scale:.7}.white-petal:nth-child(17){left:49%;animation-duration:32s;animation-delay:-24s;scale:.65}.white-petal:nth-child(18){left:93%;animation-duration:20s;animation-delay:-6s;scale:.8}
+.txn-action-edit,.txn-action-delete{border:0;background:transparent;font-size:.7rem;font-weight:700;cursor:pointer;padding:3px 5px}.txn-action-edit{color:var(--tab-deep)}.txn-action-delete{color:#6D3434}.txn-edit-actions{display:flex;justify-content:flex-end;gap:2px}.budget-row label{display:flex;align-items:center;justify-content:space-between;gap:6px}
+body.dark-mode .txn-action-edit{color:#BFD6C8}body.dark-mode .txn-action-delete,body.dark-mode .remove-account-btn{color:#D69B9B}
+
+
+/* Bamboo animation and right-side dark-mode control adopted from the supplied dark-mode organizer */
+.bamboo-backdrop{width:245px;opacity:.18}
+.bamboo-backdrop .c4{left:12px;height:96%;transform:rotate(5deg);opacity:.56}
+.bamboo-backdrop .c5{left:58px;height:112%;transform:rotate(-7deg);opacity:.44}
+.bamboo-backdrop .c6{left:105px;height:91%;transform:rotate(8deg);opacity:.58}
+.bamboo-backdrop .c7{left:162px;height:115%;transform:rotate(-5deg);opacity:.40}
+.bamboo-backdrop .c8{left:211px;height:101%;transform:rotate(6deg);opacity:.52}
+.bamboo-backdrop .bl6{right:132px;top:9%;transform:scaleX(-1) rotate(18deg);opacity:.65}
+.bamboo-backdrop .bl7{right:152px;top:37%;transform:rotate(13deg);opacity:.58}
+.bamboo-backdrop .bl8{right:122px;top:68%;transform:scaleX(-1) rotate(23deg);opacity:.70}
+.bamboo-backdrop .bl9{right:185px;top:52%;transform:rotate(8deg);opacity:.48}
+.bamboo-backdrop .bl10{right:195px;top:84%;transform:scaleX(-1) rotate(17deg);opacity:.54}
+.theme-toggle{position:fixed!important;right:18px!important;left:auto!important;top:126px!important;z-index:1100;display:flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid color-mix(in srgb,var(--tab) 30%,white);border-radius:999px;background:rgba(255,255,255,.9);color:var(--tab-deep);font-weight:700;font-size:.72rem;cursor:pointer;box-shadow:0 7px 22px rgba(28,46,36,.09);backdrop-filter:blur(12px);transition:.3s}.theme-toggle:hover{background:var(--tab);color:#fff}.theme-toggle-icon{font-size:1rem}
+@media(max-width:560px){.theme-toggle{top:121px!important;right:9px!important;left:auto!important;padding:6px 9px}.bamboo-backdrop{width:220px}}
+
+
+/* Final accessibility, pantry editing, and Money Manager list controls */
+.stock-toolbar,.money-manager-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.stock-edit-actions{display:flex;gap:5px;margin-top:6px}.stock-edit-actions button{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:4px 8px;font-size:.7rem;font-weight:700;cursor:pointer}.stock-edit-actions .delete{color:#6D3434}
+.money-manager-settings{display:none;margin:0 0 14px}.money-manager-settings.active{display:block}.manager-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.manager-block{background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:15px;padding:12px;box-shadow:var(--shadow)}.manager-block h3{font-size:.83rem;color:var(--tab-deep);margin-bottom:8px}.managed-list{display:grid;gap:6px;margin-bottom:9px}.managed-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;background:var(--tab-pale);border:1px solid var(--border);border-radius:9px;font-size:.75rem;font-weight:600}.managed-row button{border:0;background:transparent;color:#6D3434;font-size:.68rem;font-weight:800;cursor:pointer}.manager-add{display:flex;gap:6px}.manager-add input{min-width:0;padding:8px 9px}.manager-add button{width:auto;white-space:nowrap;padding:8px 10px}
+.btn-main{color:#537563!important;background:#fff!important;border:1px solid #789887!important}.btn-main:hover{color:#fff!important;background:var(--tab)!important;border-color:var(--tab)!important}
+body.dark-mode .top-header,body.dark-mode .month-strip,body.dark-mode .nav-bar,body.dark-mode .sheet,body.dark-mode .cat-box,body.dark-mode .day-card,body.dark-mode .metric-strip,body.dark-mode .budget-card,body.dark-mode .manager-block{background:#18251D!important;color:#EEF5F0!important;border-color:#3B5144!important}
+body.dark-mode .task-row,body.dark-mode .txn-item,body.dark-mode .day-head{background:#18251D!important;color:#EEF5F0!important;border-color:#3B5144!important}
+body.dark-mode .task-title,body.dark-mode .sheet-title,body.dark-mode .metric-val,body.dark-mode .metric-label,body.dark-mode .brand-title,body.dark-mode .brand-subtitle,body.dark-mode label,body.dark-mode h1,body.dark-mode h2,body.dark-mode h3,body.dark-mode .day-head,body.dark-mode .txn-item,body.dark-mode .summary-item,body.dark-mode .edit-budget-note,body.dark-mode .budget-row,body.dark-mode .managed-row{color:#EEF5F0!important}
+body.dark-mode .cat-head{color:#F3F7F4!important;background:linear-gradient(90deg,color-mix(in srgb,var(--tab) 30%,#18251D),#18251D)!important}
+body.dark-mode input,body.dark-mode select,body.dark-mode option,body.dark-mode textarea{background:#101A14!important;color:#EEF5F0!important;border-color:#52695B!important;-webkit-text-fill-color:#EEF5F0!important}
+body.dark-mode input::placeholder,body.dark-mode textarea::placeholder{color:#9EAEA4!important;-webkit-text-fill-color:#9EAEA4!important}
+body.dark-mode .month-chip,body.dark-mode .summary-item,body.dark-mode .managed-row{background:#111B15!important;color:#EEF5F0!important;border-color:#3B5144!important}
+body.dark-mode .month-chip.active{background:var(--tab)!important;color:#fff!important}
+body.dark-mode .btn-main{color:#A8C3B4!important;background:#18251D!important;border-color:#A8C3B4!important}
+body.dark-mode .btn-main:hover{color:#fff!important;background:var(--tab)!important}
+body.dark-mode .global-edit,body.dark-mode .add-account-btn,body.dark-mode .stock-edit-actions button{background:#18251D!important;color:#BFD6C8!important;border-color:#63806E!important}
+body.dark-mode .txn-badge{background:#2A3A30!important;color:#DDE9E2!important}.day-spend{color:var(--text-main)}body.dark-mode .day-spend{color:#D9E7DF!important}
+body.dark-mode canvas{filter:brightness(1.08)}
+@media(max-width:650px){.manager-grid{grid-template-columns:1fr}.stock-toolbar,.money-manager-panel-head{align-items:flex-start}.manager-add{flex-wrap:wrap}.manager-add button{width:100%}}
+
+</style>
+ </head>
+ <body class="theme-schedule">
+  <div class="lily-scene" aria-hidden="true">
+   <div class="bamboo-backdrop bamboo-left">
+    <i class="bamboo-cane" style="--x:35px;--r:-4deg"></i><i class="bamboo-cane" style="--x:82px;--r:2deg"></i><i class="bamboo-cane" style="--x:128px;--r:-1deg"></i><i class="bamboo-leaf bl1"></i><i class="bamboo-leaf bl2"></i><i class="bamboo-leaf bl3"></i><i class="bamboo-leaf bl4"></i><i class="bamboo-leaf bl5"></i><i class="bamboo-cane c4"></i><i class="bamboo-cane c5"></i><i class="bamboo-cane c6"></i><i class="bamboo-cane c7"></i><i class="bamboo-cane c8"></i><i class="bamboo-leaf bl6"></i><i class="bamboo-leaf bl7"></i><i class="bamboo-leaf bl8"></i><i class="bamboo-leaf bl9"></i><i class="bamboo-leaf bl10"></i>
+   </div>
+   <div class="bamboo-backdrop">
+    <i class="bamboo-cane" style="--x:35px;--r:-4deg"></i><i class="bamboo-cane" style="--x:82px;--r:2deg"></i><i class="bamboo-cane" style="--x:128px;--r:-1deg"></i><i class="bamboo-leaf bl1"></i><i class="bamboo-leaf bl2"></i><i class="bamboo-leaf bl3"></i><i class="bamboo-leaf bl4"></i><i class="bamboo-leaf bl5"></i><i class="bamboo-cane c4"></i><i class="bamboo-cane c5"></i><i class="bamboo-cane c6"></i><i class="bamboo-cane c7"></i><i class="bamboo-cane c8"></i><i class="bamboo-leaf bl6"></i><i class="bamboo-leaf bl7"></i><i class="bamboo-leaf bl8"></i><i class="bamboo-leaf bl9"></i><i class="bamboo-leaf bl10"></i>
+   </div>
+   <div class="rain-field">
+    <i class="rain-drop"></i><i class="rain-drop"></i><i class="rain-drop"></i><i class="rain-drop"></i><i class="rain-drop"></i><i class="rain-drop"></i><i class="rain-drop"></i>
+   </div>
+   <div class="petal-field-final">
+    <i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i><i class="white-petal"></i>
+   </div>
+   <div class="watercolor-haze"></div>
+   <div class="flower-rain">
+    <i class="falling-lily"></i><i class="falling-lily"></i><i class="falling-lily"></i><i class="falling-lily"></i><i class="falling-lily"></i><i class="falling-lily"></i><i class="falling-lily"></i><i class="falling-lily"></i>
+   </div>
+  </div>
+  <button class="music-control" id="music-control" onclick="toggleZenMusic()" aria-label="Play or pause calming background music"><span class="music-dot"></span><span id="music-label">Play calming music</span></button>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleDarkMode()" aria-label="Switch between light and dark mode"><span class="theme-toggle-icon" id="theme-toggle-icon">☾</span><span id="theme-toggle-label">Dark mode</span></button>
+  <!-- Header -->
+  <header class="top-header">
+   <div class="top-row">
+    <div>
+     <div class="brand-title">🌿My Organizer🌿</div>
+     <div class="brand-subtitle">Live life my way!!!</div>
+    </div>
+    <div>
+     <select id="year-select" class="year-select" onchange="changeYear(this.value)"> <option value="2025">2025</option> <option value="2026" selected>2026</option> <option value="2027">2027</option> <option value="2028">2028</option> <option value="2029">2029</option> <option value="2030">2030</option> <option value="2031">2031</option> <option value="2032">2032</option> <option value="2033">2033</option> <option value="2034">2034</option> <option value="2035">2035</option> <option value="2036">2036</option> <option value="2037">2037</option> <option value="2038">2038</option> <option value="2039">2039</option> <option value="2040">2040</option> <option value="2041">2041</option> <option value="2042">2042</option> <option value="2043">2043</option> <option value="2044">2044</option> <option value="2045">2045</option> <option value="2046">2046</option> <option value="2047">2047</option> <option value="2048">2048</option> <option value="2049">2049</option> <option value="2050">2050</option> </select>
+    </div>
+   </div>
+  </header>
+  <!-- Month Strip -->
+  <div class="month-strip" id="month-strip"></div>
+  <div class="container">
+   <!-- ================= TAB 1: EXPENSES (MONEY MANAGER) ================= -->
+   <div id="tab-expenses" class="tab-view">
+    <div class="money-manager-panel-head">
+     <span style="font-size:.9rem;font-weight:800;color:var(--tab-deep)">Money Manager</span>
+     <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="global-edit" id="money-lists-edit-btn" onclick="toggleMoneyListsEdit()">⚙ Edit lists</button>
+      <button class="global-edit" id="expense-edit-btn" onclick="toggleExpenseEdit()">✎ Edit entries</button>
+     </div>
+    </div>
+    <div class="money-manager-settings" id="money-manager-settings">
+     <div class="manager-grid">
+      <section class="manager-block">
+       <h3>Payment Sources</h3>
+       <div class="managed-list" id="payment-source-list"></div>
+       <div class="manager-add">
+        <input id="new-payment-source" placeholder="New payment source">
+        <button class="btn-main" onclick="addMoneyListItem('sources')">+ Add</button>
+       </div>
+      </section>
+      <section class="manager-block">
+       <h3>Accounts</h3>
+       <div class="managed-list" id="money-account-list"></div>
+       <div class="manager-add">
+        <input id="new-money-account" placeholder="New account">
+        <button class="btn-main" onclick="addMoneyListItem('accounts')">+ Add</button>
+       </div>
+      </section>
+      <section class="manager-block">
+       <h3>Categories</h3>
+       <div class="managed-list" id="money-category-list"></div>
+       <div class="manager-add">
+        <input id="new-money-category" placeholder="New category">
+        <button class="btn-main" onclick="addMoneyListItem('categories')">+ Add</button>
+       </div>
+      </section>
+     </div>
+    </div>
+    <div class="metric-strip">
+     <div>
+      <div class="metric-label">Income 🌿</div>
+      <div class="metric-val val-income" id="month-income">₹0</div>
+     </div>
+     <div>
+      <div class="metric-label">Expenses 🍂</div>
+      <div class="metric-val val-expense" id="month-expense">₹0</div>
+     </div>
+     <div>
+      <div class="metric-label">Balance 🪾</div>
+      <div class="metric-val val-bal" id="month-bal">₹0</div>
+     </div>
+    </div>
+    <div id="expense-list-container"></div>
+   </div>
+   <!-- ================= TAB 2: SCHEDULE & COMMITMENTS ================= -->
+   <div id="tab-schedule" class="tab-view active">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+     <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);" id="sched-month-heading">September 2026 Commitments</span>
+     <div style="display:flex;gap:7px">
+      <button class="global-edit" id="global-edit-btn" onclick="toggleEditMode()">✎ Edit all</button>
+      <button class="btn-status pending" style="border-radius:8px;font-size:.75rem" onclick="openAddEntryModal()">+ Add New Entry</button>
+     </div>
+    </div>
+    <div id="category-schedule-container"></div>
+   </div>
+   <!-- ================= TAB 3: STOCK & PANTRY ================= -->
+   <div id="tab-stock" class="tab-view">
+    <div class="stock-toolbar">
+     <span style="font-size:.9rem;font-weight:800;color:var(--tab-deep)">Pantry Stock</span>
+     <button class="global-edit" id="stock-edit-btn" onclick="toggleStockEdit()">✎ Edit stock</button>
+    </div>
+    <div class="metric-strip" style="grid-template-columns: 1fr 1fr; margin-bottom: 12px;">
+     <div>
+      <div class="metric-label">Total Stocked Items</div>
+      <div class="metric-val" id="stock-count-val">0</div>
+     </div>
+     <div>
+      <div class="metric-label">Refill / Low Stock</div>
+      <div class="metric-val val-expense" id="stock-low-val">0</div>
+     </div>
+    </div>
+    <div id="stock-items-container"></div>
+    <button class="btn-main" style="margin-top:12px; background:var(--lily-700);" onclick="openAddStockModal()">+ Add New Stock Item</button>
+   </div>
+   <div id="tab-budget" class="tab-view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+     <span style="font-size:.9rem;font-weight:800;color:var(--lily-dark)">Monthly Budget &amp; Payment Overview</span>
+     <button class="global-edit" id="budget-edit-btn" onclick="toggleBudgetEdit()">✎ Edit budgets</button>
+    </div>
+    <div class="budget-grid">
+     <section class="budget-card">
+      <h3>Overall monthly budget</h3>
+      <div class="budget-row">
+       <label for="overall-budget">Limit (₹)</label><input class="budget-input" id="overall-budget" type="number" min="0" disabled>
+      </div>
+      <div id="overall-budget-status"></div>
+     </section>
+     <section class="budget-card">
+      <h3>Category budgets</h3>
+      <div id="category-budget-inputs"></div>
+      <div class="add-account-panel" id="add-category-panel" style="display:none">
+       <div class="edit-budget-note">Add another budget category and its monthly limit.</div>
+       <div class="add-account-row">
+        <input id="new-category-name" type="text" placeholder="Category name"><input id="new-category-limit" type="number" min="0" placeholder="Limit ₹">
+        <button class="add-account-btn" onclick="addBudgetCategory()">+ Add</button>
+       </div>
+      </div>
+     </section>
+     <section class="budget-card">
+      <h3>Credit card spending</h3>
+      <div id="card-summary" class="summary-list"></div>
+      <div id="card-budget-inputs"></div>
+      <div class="add-account-panel" id="add-card-panel" style="display:none">
+       <div class="edit-budget-note">Add another credit card and its monthly limit.</div>
+       <div class="add-account-row">
+        <input id="new-card-name" type="text" placeholder="Card name"><input id="new-card-limit" type="number" min="0" placeholder="Limit ₹">
+        <button class="add-account-btn" onclick="addBudgetCard()">+ Add</button>
+       </div>
+      </div>
+     </section>
+     <section class="budget-card">
+      <h3>Spending by account</h3>
+      <div id="account-summary" class="summary-list"></div>
+      <div id="account-budget-inputs" class="account-budget-inputs"></div>
+      <div class="add-account-panel" id="add-account-panel" style="display:none">
+       <div class="edit-budget-note">Add another account and its monthly budget.</div>
+       <div class="add-account-row">
+        <input id="new-account-name" type="text" placeholder="Account name"><input id="new-account-limit" type="number" min="0" placeholder="Limit ₹">
+        <button class="add-account-btn" onclick="addBudgetAccount()">+ Add</button>
+       </div>
+      </div>
+     </section>
+    </div>
+    <div class="budget-actions">
+     <button class="btn-main" id="save-budget-btn" style="display:none" onclick="saveBudgets()">Save budget settings</button>
+    </div>
+    <div class="cat-box" style="padding:14px">
+     <div style="font-size:.9rem;font-weight:800;color:var(--lily-dark)">Budget usage by category</div>
+     <div style="font-size:.73rem;color:var(--text-muted);margin-top:3px">Deep green is within limit. Woodland brown exceeds the limit.</div>
+     <div class="chart-box small">
+      <canvas id="budgetCanvas"></canvas>
+     </div>
+    </div>
+   </div>
+   <!-- ================= TAB 5: CHARTS & ANALYTICS ================= -->
+   <div id="tab-charts" class="tab-view">
+    <div class="cat-box" style="padding: 14px;">
+     <div style="font-size: 0.9rem; font-weight: 700; color: var(--sakura-700);">Spend by Category ❀</div>
+     <div class="chart-box">
+      <canvas id="catDonutCanvas"></canvas>
+     </div>
+    </div>
+    <div class="cat-box" style="padding: 14px;">
+     <div style="font-size: 0.9rem; font-weight: 700; color: var(--lily-dark);">Monthly Expense ❀</div>
+     <div class="chart-box">
+      <canvas id="monthBarCanvas"></canvas>
+     </div>
+    </div>
+    <div class="cat-box" style="padding: 14px;">
+     <div style="font-size: 0.9rem; font-weight: 700; color: var(--jasmine-500);">Category Completion Adherence ❀</div>
+     <div class="chart-box">
+      <canvas id="adherenceCanvas"></canvas>
+     </div>
+    </div>
+   </div>
+  </div>
+  <!-- Floating Add Button for Expense -->
+  <button class="fab" id="fab-expense" onclick="openAddExpenseModal()">+</button>
+  <!-- ================= MODAL: EDIT / RENAME ENTRY ================= -->
+  <div class="modal" id="modal-edit-task">
+   <div class="sheet">
+    <div class="sheet-title">
+     <span>Edit Entry Name / Details ❀</span> <span style="cursor:pointer;" onclick="closeModal('modal-edit-task')">✕</span>
+    </div>
+    <div class="form-group">
+     <label>Entry Name &amp; Amount</label> <input type="text" id="edit-task-input" placeholder="e.g. Axis Bank : 25,000/-">
+    </div>
+    <button class="btn-main" onclick="confirmEditTask()">Save Changes</button>
+   </div>
+  </div>
+  <!-- ================= MODAL: ADD CUSTOM ENTRY ================= -->
+  <div class="modal" id="modal-add-task">
+   <div class="sheet">
+    <div class="sheet-title">
+     <span>Add Schedule Commitment 🌿</span> <span style="cursor:pointer;" onclick="closeModal('modal-add-task')">✕</span>
+    </div>
+    <div class="form-group">
+     <label>Target Category</label> <select id="new-task-cat"></select>
+    </div>
+    <div class="form-group">
+     <label>Entry Description &amp; Amount</label> <input type="text" id="new-task-name" placeholder="e.g. ICICI Loan : 12,000/-" required>
+    </div>
+    <button class="btn-main" onclick="confirmAddTask()">Add to Schedule</button>
+   </div>
+  </div>
+  <!-- ================= MODAL: LOG EXPENSE (MONEY MANAGER) ================= -->
+  <div class="modal" id="modal-add-expense">
+   <div class="sheet">
+    <div class="sheet-title">
+     <span>Log Transaction ❀</span> <span style="cursor:pointer;" onclick="closeModal('modal-add-expense')">✕</span>
+    </div>
+    <form id="form-new-expense">
+     <div class="form-group">
+      <label>Type</label> <select id="exp-type"> <option value="Expense">Expense</option> <option value="Income">Income</option> </select>
+     </div>
+     <div class="form-group">
+      <label>Date</label> <input type="date" id="exp-date" required>
+     </div>
+     <div class="form-group">
+      <label>Account</label> <select id="exp-account"></select>
+     </div>
+     <div class="form-group">
+      <label>Payment Source</label> <select id="exp-source"></select>
+     </div>
+     <div class="form-group">
+      <label>Category</label> <select id="exp-cat"></select>
+     </div>
+     <div class="form-group">
+      <label>Amount (₹)</label> <input type="number" step="0.01" id="exp-amt" placeholder="e.g. 2500" required>
+     </div>
+     <div class="form-group">
+      <label>Note / Description</label> <input type="text" id="exp-desc" placeholder="e.g. Axis bank transfer or groceries">
+     </div>
+     <button type="submit" class="btn-main">Save Transaction</button>
+    </form>
+   </div>
+  </div>
+  <!-- ================= MODAL: EDIT TRANSACTION ================= -->
+  <div class="modal" id="modal-edit-expense">
+   <div class="sheet">
+    <div class="sheet-title">
+     <span>Edit Transaction 💰</span><span style="cursor:pointer" onclick="closeModal('modal-edit-expense')">✕</span>
+    </div>
+    <input type="hidden" id="edit-exp-id">
+    <div class="form-group">
+     <label>Type</label><select id="edit-exp-type"><option>Expense</option><option>Income</option></select>
+    </div>
+    <div class="form-group">
+     <label>Date</label><input type="date" id="edit-exp-date">
+    </div>
+    <div class="form-group">
+     <label>Account</label><input type="text" id="edit-exp-account">
+    </div>
+    <div class="form-group">
+     <label>Payment Source</label><input type="text" id="edit-exp-source">
+    </div>
+    <div class="form-group">
+     <label>Category</label><input type="text" id="edit-exp-cat">
+    </div>
+    <div class="form-group">
+     <label>Amount (₹)</label><input type="number" step="0.01" id="edit-exp-amt">
+    </div>
+    <div class="form-group">
+     <label>Note / Description</label><input type="text" id="edit-exp-desc">
+    </div>
+    <button class="btn-main" onclick="saveEditedExpense()">Save changes</button>
+   </div>
+  </div>
+  <!-- ================= MODAL: TASK COMPLETION DATE ================= -->
+  <div class="modal" id="modal-complete-date">
+   <div class="sheet">
+    <div class="sheet-title">
+     <span id="date-picker-task-name">Mark Completed ❀</span> <span style="cursor:pointer;" onclick="closeModal('modal-complete-date')">✕</span>
+    </div>
+    <div class="form-group">
+     <label>Select Completion Date</label> <input type="date" id="completion-date-input">
+    </div>
+    <div style="display:flex; gap:10px;">
+     <button class="btn-main" style="background:var(--lily-500); flex:2;" onclick="setTaskDone(true)">✓ Mark Done</button>
+     <button class="btn-main" style="background:var(--sakura-600); flex:1;" onclick="setTaskDone(false)">Reset (N)</button>
+    </div>
+   </div>
+  </div>
+  <!-- ================= MODAL: ADD STOCK ================= -->
+  <div class="modal" id="modal-add-stock">
+   <div class="sheet">
+    <div class="sheet-title">
+     <span>Add Stock Item 🌿</span> <span style="cursor:pointer;" onclick="closeModal('modal-add-stock')">✕</span>
+    </div>
+    <form id="form-new-stock">
+     <div class="form-group">
+      <label>Item Name</label> <input type="text" id="stock-name-in" placeholder="e.g. Jasmine Tea / Domex" required>
+     </div>
+     <div style="display:flex; gap:8px;">
+      <div class="form-group" style="flex:1;">
+       <label>Quantity Count</label> <input type="number" id="stock-num-in" min="0" value="1" required>
+      </div>
+      <div class="form-group" style="flex:1;">
+       <label>Unit</label> <input type="text" id="stock-unit-in" placeholder="bottles/rolls">
+      </div>
+     </div>
+     <div class="form-group">
+      <label>Volume / Pack Info</label> <input type="text" id="stock-pack-in" placeholder="e.g. 2L packet">
+     </div>
+     <button type="submit" class="btn-main">Save Item</button>
+    </form>
+   </div>
+  </div>
+  <div class="modal" id="modal-edit-stock">
+   <div class="sheet">
+    <div class="sheet-title">
+     <span>Edit Stock Item</span><span style="cursor:pointer" onclick="closeModal('modal-edit-stock')">✕</span>
+    </div>
+    <input type="hidden" id="edit-stock-index">
+    <div class="form-group">
+     <label>Item Name</label><input id="edit-stock-name">
+    </div>
+    <div style="display:flex;gap:8px">
+     <div class="form-group" style="flex:1">
+      <label>Quantity</label><input type="number" min="0" id="edit-stock-number">
+     </div>
+     <div class="form-group" style="flex:1">
+      <label>Unit</label><input id="edit-stock-unit">
+     </div>
+    </div>
+    <div class="form-group">
+     <label>Volume / Pack Info</label><input id="edit-stock-pack">
+    </div>
+    <button class="btn-main" onclick="saveEditedStock()">Save stock item</button>
+   </div>
+  </div>
+  <!-- Bottom Navigation -->
+  <nav class="nav-bar">
+   <div class="nav-item active" onclick="switchTab('schedule')">
+    <span class="nav-icon botanical">📋</span><span>Schedule</span>
+   </div>
+   <div class="nav-item" onclick="switchTab('expenses')">
+    <span class="nav-icon botanical">💰</span><span>Money Manager</span>
+   </div>
+   <div class="nav-item" onclick="switchTab('budget')">
+    <span class="nav-icon">🌱</span><span>Budget</span>
+   </div>
+   <div class="nav-item" onclick="switchTab('stock')">
+    <span class="nav-icon">🧺</span><span>Pantry Stock</span>
+   </div>
+   <div class="nav-item" onclick="switchTab('charts')">
+    <span class="nav-icon">📊</span><span>Analytics</span>
+   </div>
+  </nav>
+  <script>
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    // Up-to-date schedule entries extracted directly from September in MSZ_Schedule_2026.xlsx
+    const INITIAL_CATEGORIES = {
+      "Banking & EMIs": [
+        "Axis Bank : 34,500/-",
+        "Canara Bank: 24,000/-",
+        "Federal : 15,500/-",
+        "Credit Card: "
+      ],
+      "Investments & Savings": [
+        "ESAF (Canara): 10,000/-",
+        "Parag(Canara): 5,000/-",
+        "UTI (Canara): 3,500/-",
+        "ICICI (Canara): 5,000/-"
+      ],
+      "Household & Utilities": [
+        "World Vision (Axis): 2000/-",
+        "Rent (Axis): 8,000/-",
+        "Maintenance (Axis): 2,504.30/-",
+        "Rentomojo (Axis): 1,810/-",
+        "Wifi bill (Axis): 824.83/-",
+        "Electricity Bill (Axis)"
+      ],
+      "Recharges & Travel": [
+        "Fastag (Axis): 500/-",
+        "Metrocard (Axis): 500/-",
+        "6238002637 (Jio 79) 30 days",
+        "7829238715 (Vi 670) 56 days",
+        "7558080680 (Jio 899) 90 days",
+        "Auto to Office",
+        "Sachy Pickup",
+        "Kerala"
+      ],
+      "Health, Wellness & Chores": [
+        "Thyronorm",
+        "Weight",
+        "Office/WFH",
+        "Walking",
+        "Water plants",
+        "Mop floor ",
+        "Vaccum floor ",
+        "Haircut",
+        "Eyebrow ",
+        "Bathroom Cleaning UC"
+      ]
+    };
+
+    // Preloaded Pantry Stock
+    const INITIAL_STOCK = [
+      { item: "Kitchen Towels", number: 3, unit: "rolls", pack: "3 rolls" },
+      { item: "Handwash", number: 3, unit: "packets", pack: "2L" },
+      { item: "Bathroom Cleaner", number: 2, unit: "bottles", pack: "2L" },
+      { item: "Domex", number: 2, unit: "packets", pack: "2L" },
+      { item: "Fabric Conditioner", number: 2, unit: "packet", pack: "4L" },
+      { item: "Washing Machine Liquid", number: 2, unit: "packets", pack: "1L" },
+      { item: "Dishwashing Liquid", number: 2, unit: "bottles", pack: "3L" },
+      { item: "Robin", number: 2, unit: "bottles", pack: "400mL" },
+      { item: "Basmati Rice", number: 1, unit: "packet", pack: "1 kg" },
+      { item: "Matta Rice", number: 1, unit: "bottle", pack: "2.5 kg" },
+      { item: "Garbage Bags", number: 3, unit: "packet", pack: "60 covers" },
+      { item: "Dove soap", number: 2, unit: "soaps", pack: "2 bars" },
+      { item: "Pears Soap", number: 2, unit: "soaps", pack: "2 bars" },
+      { item: "Rexona", number: 1, unit: "soap", pack: "1 bar" },
+      { item: "Sugar", number: 0, unit: "packet", pack: "Refill needed" }
+    ];
+
+    // September 2026 expense and day tracking baseline
+    const INITIAL_EXPENSES = [
+      { id: 1, date: "2026-09-01", type: "Expense", account: "Axis Bank", category: "Investments & EMIs", amount: 34500.0, desc: "Axis Bank EMI" },
+      { id: 2, date: "2026-09-01", type: "Expense", account: "Canara Bank", category: "Investments & EMIs", amount: 24000.0, desc: "Canara Bank Transfer" },
+      { id: 3, date: "2026-09-01", type: "Expense", account: "Federal Bank", category: "Investments & EMIs", amount: 15500.0, desc: "Federal Payment" },
+      { id: 4, date: "2026-09-01", type: "Expense", account: "Axis Bank", category: "Bills & Utilities", amount: 8000.0, desc: "Rent (Axis)" },
+      { id: 5, date: "2026-09-01", type: "Expense", account: "Axis Bank", category: "Bills & Utilities", amount: 2504.30, desc: "Maintenance" },
+      { id: 6, date: "2026-09-01", type: "Expense", account: "Axis Bank", category: "Bills & Utilities", amount: 1810.0, desc: "Rentomojo" },
+      { id: 7, date: "2026-09-04", type: "Expense", account: "Axis Bank", category: "Commute & Travel", amount: 500.0, desc: "Metrocard Recharge" },
+      { id: 8, date: "2026-09-01", type: "Expense", account: "Axis Bank", category: "Bills & Utilities", amount: 79.0, desc: "Jio Recharge 6238002637" },
+      { id: 9, date: "2026-09-01", type: "Expense", account: "Axis Bank", category: "Bills & Utilities", amount: 899.0, desc: "Jio Recharge 7558080680" },
+      { id: 10, date: "2026-09-01", type: "Income", account: "Axis Bank", category: "Salary & Inflow", amount: 110000.0, desc: "Monthly Salary Inflow" }
+    ];
+
+    // Application State
+    let currentYear = 2026;
+    let currentMonth = 'September';
+    let currentTab = 'schedule';
+    let editMode = false;
+    let budgetEditMode = false;
+    let expenseEditMode = false;
+    let stockEditMode = false;
+    let moneyListsEditMode = false;
+    let editingExpenseId = null;
+    let budgetChart = null;
+
+    let appData = {
+      categories: JSON.parse(localStorage.getItem('msz_sakura_categories')) || INITIAL_CATEGORIES,
+      schedules: JSON.parse(localStorage.getItem('msz_sakura_schedules')) || {},
+      expenses: JSON.parse(localStorage.getItem('msz_sakura_expenses')) || INITIAL_EXPENSES,
+      stock: JSON.parse(localStorage.getItem('msz_sakura_stock')) || INITIAL_STOCK,
+      budgets: JSON.parse(localStorage.getItem('msz_sakura_budgets')) || { overall: 100000, categories: {}, cards: {'Card 1':30000,'Card 2':30000}, accounts:{} },
+      moneyLists: JSON.parse(localStorage.getItem('msz_money_lists')) || {
+        accounts: ['Axis Bank','Canara Bank','Federal Bank','Cash'],
+        sources: ['Account','Card 1','Card 2'],
+        categories: ['Bills & Utilities','Food & Grocery','Commute & Travel','Investments & EMIs','Shopping & Home','Salary & Inflow','Other']
+      }
+    };
+
+    // Pre-populate September completed items based on spreadsheet
+    function ensureInitialScheduleData() {
+      const sepKey = "2026_September";
+      if (!appData.schedules[sepKey]) {
+        appData.schedules[sepKey] = {
+          "Axis Bank : 34,500/-": { completed: true, completedDate: "2026-09-01" },
+          "Canara Bank: 24,000/-": { completed: true, completedDate: "2026-09-01" },
+          "Federal : 15,500/-": { completed: true, completedDate: "2026-09-01" },
+          "ESAF (Canara): 10,000/-": { completed: true, completedDate: "2026-09-01" },
+          "Parag(Canara): 5,000/-": { completed: true, completedDate: "2026-09-01" },
+          "World Vision (Axis): 2000/-": { completed: true, completedDate: "2026-09-01" },
+          "Rent (Axis): 8,000/-": { completed: true, completedDate: "2026-09-01" },
+          "Maintenance (Axis): 2,504.30/-": { completed: true, completedDate: "2026-09-01" },
+          "Rentomojo (Axis): 1,810/-": { completed: true, completedDate: "2026-09-01" },
+          "Metrocard (Axis): 500/-": { completed: true, completedDate: "2026-09-04" },
+          "6238002637 (Jio 79) 30 days": { completed: true, completedDate: "2026-09-01" },
+          "7558080680 (Jio 899) 90 days": { completed: true, completedDate: "2026-09-01" },
+          "Thyronorm": { completed: true, completedDate: "2026-09-17" }
+        };
+      }
+    }
+    ensureInitialScheduleData();
+    appData.budgets.categories ||= {}; appData.budgets.cards ||= {'Card 1':30000,'Card 2':30000}; appData.budgets.accounts ||= {}; appData.budgets.hiddenCategories ||= [];
+
+    function persist() {
+      localStorage.setItem('msz_sakura_categories', JSON.stringify(appData.categories));
+      localStorage.setItem('msz_sakura_schedules', JSON.stringify(appData.schedules));
+      localStorage.setItem('msz_sakura_expenses', JSON.stringify(appData.expenses));
+      localStorage.setItem('msz_sakura_stock', JSON.stringify(appData.stock));
+      localStorage.setItem('msz_sakura_budgets', JSON.stringify(appData.budgets));
+      localStorage.setItem('msz_money_lists', JSON.stringify(appData.moneyLists));
+      renderCurrentTab();
+    }
+
+    // Initialize Month Carousel
+    function initMonths() {
+      const el = document.getElementById('month-strip');
+      el.innerHTML = '';
+      MONTHS.forEach(m => {
+        const chip = document.createElement('div');
+        chip.className = `month-chip ${m === currentMonth ? 'active' : ''}`;
+        chip.innerText = m;
+        chip.onclick = () => {
+          currentMonth = m;
+          document.querySelectorAll('.month-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          document.getElementById('sched-month-heading').innerText = `${currentMonth} ${currentYear} Commitments`;
+          renderCurrentTab();
+        };
+        el.appendChild(chip);
+      });
+      document.getElementById('sched-month-heading').innerText = `${currentMonth} ${currentYear} Commitments`;
+    }
+
+    function changeYear(val) {
+      currentYear = parseInt(val);
+      document.getElementById('sched-month-heading').innerText = `${currentMonth} ${currentYear} Commitments`;
+      renderCurrentTab();
+    }
+
+    // Switch Views
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      const order = ['schedule','expenses','budget','stock','charts'];
+      const activeNav = document.querySelectorAll('.nav-item')[order.indexOf(tab)];
+      if (activeNav) activeNav.classList.add('active');
+      document.body.classList.remove('theme-schedule','theme-expenses','theme-stock','theme-budget','theme-charts');
+      document.body.classList.add(`theme-${tab}`);
+      document.getElementById('fab-expense').style.display = (tab === 'expenses') ? 'flex' : 'none';
+      renderCurrentTab();
+    }
+
+    function toggleEditMode(){ editMode=!editMode; document.body.classList.toggle('edit-mode',editMode); document.getElementById('global-edit-btn').innerText=editMode?'✓ Finish editing':'✎ Edit all'; renderSchedule(); }
+    function renameCategory(oldName){ const n=prompt('Rename category',oldName); if(!n||n===oldName||appData.categories[n])return; appData.categories[n]=appData.categories[oldName]; delete appData.categories[oldName]; persist(); }
+    function deleteCategory(name){ if(!confirm(`Delete category "${name}" and all its entries?`))return; (appData.categories[name]||[]).forEach(t=>Object.values(appData.schedules).forEach(m=>delete m[t])); delete appData.categories[name]; persist(); }
+
+    // ================= SCHEDULE LOGIC: EDIT, DELETE, ADD =================
+    let editingCategory = null;
+    let editingTaskOldName = null;
+    let activeCompleteTaskName = null;
+
+    function renderSchedule() {
+      const container = document.getElementById('category-schedule-container');
+      container.innerHTML = '';
+
+      const key = `${currentYear}_${currentMonth}`;
+      if (!appData.schedules[key]) appData.schedules[key] = {};
+      const monthSched = appData.schedules[key];
+
+      Object.entries(appData.categories).forEach(([categoryName, tasksList]) => {
+        const box = document.createElement('div');
+        box.className = 'cat-box';
+
+        const head = document.createElement('div');
+        head.className = 'cat-head';
+        head.innerHTML = `
+          <span>${categoryName}<span class="cat-edit-controls"><button class="mini-edit" onclick="renameCategory('${categoryName.replace(/'/g,"\\'")}')">Rename</button><button class="mini-edit" onclick="deleteCategory('${categoryName.replace(/'/g,"\\'")}')">Delete</button></span></span>
+          <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600">${tasksList.length} items</span>
+        `;
+        box.appendChild(head);
+
+        tasksList.forEach((taskName) => {
+          const state = monthSched[taskName] || { completed: false, completedDate: null };
+          const row = document.createElement('div');
+          row.className = 'task-row';
+
+          row.innerHTML = `
+            <div class="task-info">
+              <div class="task-title-line">
+                <span class="task-title">${taskName}</span>
+                <button class="task-edit-btn" onclick="openEditTaskModal('${categoryName}', '${taskName.replace(/'/g, "\\'")}')">✎</button>
+                <button class="task-del-btn" onclick="deleteTaskEntry('${categoryName}', '${taskName.replace(/'/g, "\\'")}')">🗑</button>
+              </div>
+              ${state.completed && state.completedDate ? `<div class="completion-tag">✓ Done on ${state.completedDate}</div>` : ''}
+            </div>
+            <div>
+              <button class="btn-status ${state.completed ? 'done' : 'pending'}" onclick="openCompleteDateModal('${taskName.replace(/'/g, "\\'")}')">
+                ${state.completed ? '✓ Completed' : 'Pending (N)'}
+              </button>
+            </div>
+          `;
+          box.appendChild(row);
+        });
+
+        container.appendChild(box);
+      });
+    }
+
+    // Edit entry name / amount (e.g. 25,000/- from Axis Bank)
+    function openEditTaskModal(catName, taskName) {
+      editingCategory = catName;
+      editingTaskOldName = taskName;
+      document.getElementById('edit-task-input').value = taskName;
+      document.getElementById('modal-edit-task').classList.add('active');
+    }
+
+    function confirmEditTask() {
+      const newName = document.getElementById('edit-task-input').value.trim();
+      if (!newName || !editingCategory || !editingTaskOldName) return;
+
+      const list = appData.categories[editingCategory];
+      const idx = list.indexOf(editingTaskOldName);
+      if (idx !== -1) {
+        list[idx] = newName;
+      }
+
+      // Rename across existing schedule states
+      Object.keys(appData.schedules).forEach(k => {
+        if (appData.schedules[k][editingTaskOldName]) {
+          appData.schedules[k][newName] = appData.schedules[k][editingTaskOldName];
+          delete appData.schedules[k][editingTaskOldName];
+        }
+      });
+
+      closeModal('modal-edit-task');
+      persist();
+    }
+
+    // Delete entry
+    function deleteTaskEntry(catName, taskName) {
+      if (!confirm(`Remove "${taskName}" from ${catName}?`)) return;
+      appData.categories[catName] = appData.categories[catName].filter(t => t !== taskName);
+
+      // Clean from schedule
+      Object.keys(appData.schedules).forEach(k => {
+        delete appData.schedules[k][taskName];
+      });
+
+      persist();
+    }
+
+    // Add entry
+    function openAddEntryModal() {
+      const select = document.getElementById('new-task-cat');
+      select.innerHTML = '';
+      Object.keys(appData.categories).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.innerText = c;
+        select.appendChild(opt);
+      });
+      document.getElementById('new-task-name').value = '';
+      document.getElementById('modal-add-task').classList.add('active');
+    }
+
+    function confirmAddTask() {
+      const cat = document.getElementById('new-task-cat').value;
+      const name = document.getElementById('new-task-name').value.trim();
+      if (!name) return;
+
+      if (!appData.categories[cat]) appData.categories[cat] = [];
+      if (!appData.categories[cat].includes(name)) {
+        appData.categories[cat].push(name);
+      }
+
+      closeModal('modal-add-task');
+      persist();
+    }
+
+    // Completion Date Modal
+    function openCompleteDateModal(taskName) {
+      activeCompleteTaskName = taskName;
+      document.getElementById('date-picker-task-name').innerText = taskName;
+      const key = `${currentYear}_${currentMonth}`;
+      const state = (appData.schedules[key] && appData.schedules[key][taskName]) || {};
+
+      document.getElementById('completion-date-input').value = state.completedDate || new Date().toISOString().split('T')[0];
+      document.getElementById('modal-complete-date').classList.add('active');
+    }
+
+    function setTaskDone(isDone) {
+      const key = `${currentYear}_${currentMonth}`;
+      if (!appData.schedules[key]) appData.schedules[key] = {};
+
+      const d = document.getElementById('completion-date-input').value;
+      appData.schedules[key][activeCompleteTaskName] = {
+        completed: isDone,
+        completedDate: isDone ? d : null
+      };
+
+      closeModal('modal-complete-date');
+      persist();
+    }
+
+    // ================= EXPENSES (MONEY MANAGER) =================
+    function renderExpenses() {
+      renderMoneyListSettings();
+      const targetMonthIdx = MONTHS.indexOf(currentMonth);
+      const filtered = appData.expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === currentYear && d.getMonth() === targetMonthIdx;
+      });
+
+      let income = 0;
+      let expense = 0;
+      const groups = {};
+
+      filtered.forEach(item => {
+        const amt = parseFloat(item.amount);
+        if (item.type === 'Income') income += amt;
+        else expense += amt;
+
+        if (!groups[item.date]) groups[item.date] = [];
+        groups[item.date].push(item);
+      });
+
+      document.getElementById('month-income').innerText = '₹' + Math.round(income).toLocaleString('en-IN');
+      document.getElementById('month-expense').innerText = '₹' + Math.round(expense).toLocaleString('en-IN');
+      const bal = income - expense;
+      document.getElementById('month-bal').innerText = '₹' + Math.round(bal).toLocaleString('en-IN');
+
+      const container = document.getElementById('expense-list-container');
+      container.innerHTML = '';
+
+      const dates = Object.keys(groups).sort().reverse();
+      if (dates.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:35px; color:var(--text-muted);">No transactions in ${currentMonth} ${currentYear}. Tap <strong>+</strong> to add.</div>`;
+        return;
+      }
+
+      dates.forEach(dStr => {
+        const dayItems = groups[dStr];
+        const daySum = dayItems.reduce((acc, x) => acc + (x.type === 'Expense' ? x.amount : 0), 0);
+        const dayDate = new Date(dStr);
+        const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
+
+        const box = document.createElement('div');
+        box.className = 'day-card';
+        box.innerHTML = `
+          <div class="day-head">
+            <span>${dStr} (${dayName})</span>
+            <span class="day-spend">Total Expense: ₹${daySum.toLocaleString('en-IN')}</span>
+          </div>
+        `;
+
+        dayItems.forEach(txn => {
+          const row = document.createElement('div');
+          row.className = 'txn-item';
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:700; font-size:0.9rem;">${txn.desc || txn.category}</div>
+              <div style="display:flex; align-items:center; margin-top:2px;">
+                <span class="txn-badge">${txn.account}</span>
+                <span style="font-size:0.75rem; color:var(--text-muted);">${txn.category}</span>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div class="txn-amt ${txn.type === 'Income' ? 'val-income' : 'val-expense'}">
+                ${txn.type === 'Income' ? '+' : '-'}₹${Number(txn.amount).toLocaleString('en-IN')}
+              </div>
+              <span class="txn-edit-actions" style="font-size:0.68rem;">${expenseEditMode ? `<button class="txn-action-edit" onclick="openEditExpenseModal(${txn.id})">Edit</button><button class="txn-action-delete" onclick="deleteExpenseEntry(${txn.id})">Delete</button>` : ''}</span>
+            </div>
+          `;
+          box.appendChild(row);
+        });
+
+        container.appendChild(box);
+      });
+    }
+
+    function toggleExpenseEdit(){
+      expenseEditMode=!expenseEditMode;
+      document.getElementById('expense-edit-btn').innerText=expenseEditMode?'✓ Finish editing':'✎ Edit entries';
+      renderExpenses();
+    }
+    function openEditExpenseModal(id){
+      const x=appData.expenses.find(e=>e.id===id); if(!x)return; editingExpenseId=id;
+      document.getElementById('edit-exp-id').value=id; document.getElementById('edit-exp-type').value=x.type;
+      document.getElementById('edit-exp-date').value=x.date; document.getElementById('edit-exp-account').value=x.account||'';
+      document.getElementById('edit-exp-source').value=x.source||'Account'; document.getElementById('edit-exp-cat').value=x.category||'';
+      document.getElementById('edit-exp-amt').value=x.amount; document.getElementById('edit-exp-desc').value=x.desc||'';
+      document.getElementById('modal-edit-expense').classList.add('active');
+    }
+    function saveEditedExpense(){
+      const x=appData.expenses.find(e=>e.id===editingExpenseId); if(!x)return;
+      x.type=document.getElementById('edit-exp-type').value; x.date=document.getElementById('edit-exp-date').value;
+      x.account=document.getElementById('edit-exp-account').value.trim(); x.source=document.getElementById('edit-exp-source').value.trim()||'Account';
+      x.category=document.getElementById('edit-exp-cat').value.trim(); x.amount=Number(document.getElementById('edit-exp-amt').value)||0;
+      x.desc=document.getElementById('edit-exp-desc').value.trim(); closeModal('modal-edit-expense'); persist();
+    }
+    function deleteExpenseEntry(id) {
+      appData.expenses = appData.expenses.filter(e => e.id !== id);
+      persist();
+    }
+
+    function openAddExpenseModal() {
+      populateMoneyDropdowns();
+      document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('modal-add-expense').classList.add('active');
+    }
+
+    document.getElementById('form-new-expense').addEventListener('submit', (e) => {
+      e.preventDefault();
+      appData.expenses.push({
+        id: Date.now(),
+        type: document.getElementById('exp-type').value,
+        date: document.getElementById('exp-date').value,
+        account: document.getElementById('exp-account').value,
+        source: document.getElementById('exp-source').value,
+        category: document.getElementById('exp-cat').value,
+        amount: parseFloat(document.getElementById('exp-amt').value),
+        desc: document.getElementById('exp-desc').value
+      });
+      closeModal('modal-add-expense');
+      e.target.reset();
+      persist();
+    });
+
+
+    // ================= MONEY MANAGER LIST SETTINGS =================
+    function uniqueClean(values){return [...new Set((values||[]).map(v=>String(v).trim()).filter(Boolean))];}
+    function ensureMoneyLists(){
+      appData.moneyLists ||= {};
+      appData.moneyLists.accounts=uniqueClean(appData.moneyLists.accounts||['Axis Bank','Canara Bank','Federal Bank','Cash']);
+      appData.moneyLists.sources=uniqueClean(appData.moneyLists.sources||['Account','Card 1','Card 2']);
+      appData.moneyLists.categories=uniqueClean(appData.moneyLists.categories||['Bills & Utilities','Food & Grocery','Other']);
+      appData.expenses.forEach(e=>{if(e.account&&!appData.moneyLists.accounts.includes(e.account))appData.moneyLists.accounts.push(e.account);if(e.source&&!appData.moneyLists.sources.includes(e.source))appData.moneyLists.sources.push(e.source);if(e.category&&!appData.moneyLists.categories.includes(e.category))appData.moneyLists.categories.push(e.category)});
+    }
+    function populateSelect(id,values,selected){const sel=document.getElementById(id);if(!sel)return;sel.innerHTML='';uniqueClean(values).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});if(selected&&values.includes(selected))sel.value=selected;}
+    function populateMoneyDropdowns(){ensureMoneyLists();populateSelect('exp-account',appData.moneyLists.accounts);populateSelect('exp-source',appData.moneyLists.sources);populateSelect('exp-cat',appData.moneyLists.categories);}
+    function toggleMoneyListsEdit(){moneyListsEditMode=!moneyListsEditMode;document.getElementById('money-manager-settings').classList.toggle('active',moneyListsEditMode);document.getElementById('money-lists-edit-btn').textContent=moneyListsEditMode?'✓ Finish lists':'⚙ Edit lists';renderMoneyListSettings();}
+    function renderMoneyListSettings(){ensureMoneyLists();const configs=[['sources','payment-source-list'],['accounts','money-account-list'],['categories','money-category-list']];configs.forEach(([key,id])=>{const el=document.getElementById(id);if(el)el.innerHTML=appData.moneyLists[key].map(v=>`<div class="managed-row"><span>${v}</span><button onclick="deleteMoneyListItem('${key}','${v.replace(/'/g,"\\'")}')">Delete</button></div>`).join('')||'<div class="edit-budget-note">No items added.</div>'});populateMoneyDropdowns();}
+    function addMoneyListItem(key){const ids={sources:'new-payment-source',accounts:'new-money-account',categories:'new-money-category'},input=document.getElementById(ids[key]),name=input.value.trim();if(!name)return alert('Please enter a name.');ensureMoneyLists();if(!appData.moneyLists[key].includes(name))appData.moneyLists[key].push(name);input.value='';persist();renderMoneyListSettings();}
+    function deleteMoneyListItem(key,name){if(!confirm(`Delete "${name}" from this list? Existing transactions will remain unchanged.`))return;appData.moneyLists[key]=appData.moneyLists[key].filter(v=>v!==name);persist();renderMoneyListSettings();}
+
+    // ================= STOCK VIEW =================
+    function renderStock() {
+      const container = document.getElementById('stock-items-container');
+      container.innerHTML = '';
+      let low = 0;
+
+      appData.stock.forEach((st, idx) => {
+        if (st.number <= 0) low++;
+        const card = document.createElement('div');
+        card.className = 'task-row';
+        card.style.background = 'var(--surface)';
+        card.style.borderRadius = '10px';
+        card.style.marginBottom = '8px';
+        card.style.border = '1px solid var(--border)';
+        card.innerHTML = `
+          <div>
+            <div style="font-weight:700; font-size:0.9rem;">${st.item}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">${st.pack || ''} (${st.unit || 'units'})</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn-status" style="width:30px; height:30px; padding:0;" onclick="updateStockNum(${idx}, -1)">-</button>
+            <span style="font-weight:800; min-width:24px; text-align:center; ${st.number === 0 ? 'color:red;' : ''}">${st.number}</span>
+            <button class="btn-status" style="width:30px; height:30px; padding:0;" onclick="updateStockNum(${idx}, 1)">+</button>
+            ${stockEditMode ? `<div class="stock-edit-actions"><button onclick="openEditStock(${idx})">Edit</button><button class="delete" onclick="deleteStockItem(${idx})">Delete</button></div>` : ''}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      document.getElementById('stock-count-val').innerText = appData.stock.length;
+      document.getElementById('stock-low-val').innerText = low;
+    }
+
+
+    function toggleStockEdit(){stockEditMode=!stockEditMode;document.getElementById('stock-edit-btn').textContent=stockEditMode?'✓ Finish editing':'✎ Edit stock';renderStock();}
+    function openEditStock(idx){const st=appData.stock[idx];if(!st)return;document.getElementById('edit-stock-index').value=idx;document.getElementById('edit-stock-name').value=st.item||'';document.getElementById('edit-stock-number').value=st.number||0;document.getElementById('edit-stock-unit').value=st.unit||'';document.getElementById('edit-stock-pack').value=st.pack||'';document.getElementById('modal-edit-stock').classList.add('active');}
+    function saveEditedStock(){const idx=Number(document.getElementById('edit-stock-index').value),st=appData.stock[idx];if(!st)return;st.item=document.getElementById('edit-stock-name').value.trim()||st.item;st.number=Math.max(0,Number(document.getElementById('edit-stock-number').value)||0);st.unit=document.getElementById('edit-stock-unit').value.trim();st.pack=document.getElementById('edit-stock-pack').value.trim();closeModal('modal-edit-stock');persist();}
+    function deleteStockItem(idx){const st=appData.stock[idx];if(!st||!confirm(`Delete "${st.item}" from pantry stock?`))return;appData.stock.splice(idx,1);persist();}
+    function updateStockNum(idx, diff) {
+      appData.stock[idx].number = Math.max(0, appData.stock[idx].number + diff);
+      persist();
+    }
+
+    function openAddStockModal() {
+      document.getElementById('modal-add-stock').classList.add('active');
+    }
+
+    document.getElementById('form-new-stock').addEventListener('submit', (e) => {
+      e.preventDefault();
+      appData.stock.push({
+        item: document.getElementById('stock-name-in').value,
+        number: parseInt(document.getElementById('stock-num-in').value || 0),
+        unit: document.getElementById('stock-unit-in').value,
+        pack: document.getElementById('stock-pack-in').value
+      });
+      closeModal('modal-add-stock');
+      e.target.reset();
+      persist();
+    });
+
+
+    function allBudgetAccounts(actualAccounts={}){return [...new Set([...Object.keys(actualAccounts),...Object.keys(appData.budgets.accounts||{})])];}
+    function addBudgetAccount(){
+      const name=document.getElementById('new-account-name').value.trim(),limit=Number(document.getElementById('new-account-limit').value)||0;
+      if(!name)return alert('Please enter an account name.');
+      appData.budgets.accounts[name]=limit; ensureMoneyLists(); if(!appData.moneyLists.accounts.includes(name)) appData.moneyLists.accounts.push(name);
+      const accountSelect=document.getElementById('exp-account');
+      if(accountSelect && ![...accountSelect.options].some(o=>o.value===name)){const o=document.createElement('option');o.value=name;o.textContent=name;accountSelect.appendChild(o)}
+      persist(); document.getElementById('new-account-name').value='';document.getElementById('new-account-limit').value='';renderBudget();
+    }
+    function removeBudgetAccount(name){if(!confirm(`Remove ${name} from budget accounts?`))return;delete appData.budgets.accounts[name];persist();renderBudget();}
+    function syncCustomAccountOptions(){ensureMoneyLists();Object.keys(appData.budgets.accounts||{}).forEach(name=>{if(!appData.moneyLists.accounts.includes(name))appData.moneyLists.accounts.push(name)});populateMoneyDropdowns();}
+
+    function addBudgetCategory(){const n=document.getElementById('new-category-name').value.trim(),l=Number(document.getElementById('new-category-limit').value)||0;if(!n)return alert('Please enter a category name.');appData.budgets.categories[n]=l;appData.budgets.hiddenCategories=appData.budgets.hiddenCategories.filter(x=>x!==n);document.getElementById('new-category-name').value='';document.getElementById('new-category-limit').value='';persist();renderBudget()}
+    function removeBudgetCategory(n){if(!confirm(`Delete ${n} from Category budgets? Existing transactions will remain unchanged.`))return;delete appData.budgets.categories[n];if(!appData.budgets.hiddenCategories.includes(n))appData.budgets.hiddenCategories.push(n);persist();renderBudget()}
+    function addBudgetCard(){const n=document.getElementById('new-card-name').value.trim(),l=Number(document.getElementById('new-card-limit').value)||0;if(!n)return alert('Please enter a credit card name.');appData.budgets.cards[n]=l;document.getElementById('new-card-name').value='';document.getElementById('new-card-limit').value='';persist();renderBudget()}
+    function removeBudgetCard(n){if(!confirm(`Delete ${n} from Credit card budgets? Existing transactions will remain unchanged.`))return;delete appData.budgets.cards[n];persist();renderBudget()}
+    // ================= BUDGET VIEW =================
+    function currentMonthExpenses(){const mi=MONTHS.indexOf(currentMonth);return appData.expenses.filter(e=>{const d=new Date(e.date);return e.type==='Expense'&&d.getFullYear()===currentYear&&d.getMonth()===mi})}
+    function money(v){return '₹'+Math.round(Number(v)||0).toLocaleString('en-IN')}
+    function statusBlock(spent,limit){const pct=limit>0?Math.min((spent/limit)*100,140):0;const over=limit>0&&spent>limit;return `<div style="display:flex;justify-content:space-between;font-size:.78rem"><span>${money(spent)} used</span><strong class="limit-text">${limit?money(limit)+' limit':'No limit set'}</strong></div><div class="progress"><span class="${over?'over':''}" style="width:${Math.min(pct,100)}%"></span></div>`}
+    function toggleBudgetEdit(){budgetEditMode=!budgetEditMode;document.getElementById('budget-edit-btn').innerText=budgetEditMode?'Cancel':'✎ Edit budgets';document.getElementById('save-budget-btn').style.display=budgetEditMode?'block':'none';document.getElementById('add-account-panel').style.display=budgetEditMode?'block':'none';document.getElementById('add-category-panel').style.display=budgetEditMode?'block':'none';document.getElementById('add-card-panel').style.display=budgetEditMode?'block':'none';renderBudget()}
+    function saveBudgets(){appData.budgets.overall=Number(document.getElementById('overall-budget').value)||0;document.querySelectorAll('[data-budget-cat]').forEach(i=>appData.budgets.categories[i.dataset.budgetCat]=Number(i.value)||0);document.querySelectorAll('[data-budget-card]').forEach(i=>appData.budgets.cards[i.dataset.budgetCard]=Number(i.value)||0);document.querySelectorAll('[data-budget-account]').forEach(i=>appData.budgets.accounts[i.dataset.budgetAccount]=Number(i.value)||0);budgetEditMode=false;persist()}
+    function renderBudget(){
+      const ex=currentMonthExpenses(),total=ex.reduce((a,e)=>a+Number(e.amount),0),cats={},cards={},accounts={};
+      ex.forEach(e=>{cats[e.category]=(cats[e.category]||0)+Number(e.amount);const src=e.source||'Account';if(src.startsWith('Card'))cards[src]=(cards[src]||0)+Number(e.amount);accounts[e.account]=(accounts[e.account]||0)+Number(e.amount)});
+      const overall=document.getElementById('overall-budget');overall.value=appData.budgets.overall||0;overall.disabled=!budgetEditMode;document.getElementById('overall-budget-status').innerHTML=statusBlock(total,appData.budgets.overall||0);
+      const categoryNames=[...new Set([...Object.keys(appData.budgets.categories||{}),...Object.keys(cats),...appData.expenses.filter(e=>e.type==='Expense').map(e=>e.category)])].filter(c=>!appData.budgets.hiddenCategories.includes(c));
+      document.getElementById('category-budget-inputs').innerHTML=categoryNames.map(c=>`<div class="budget-row"><label>${c}${budgetEditMode?`<button class="remove-account-btn" onclick="removeBudgetCategory('${c.replace(/'/g,"\\'")}')">Delete</button>`:''}</label><input class="budget-input" data-budget-cat="${c}" type="number" min="0" value="${appData.budgets.categories[c]||0}" ${budgetEditMode?'':'disabled'}></div>${statusBlock(cats[c]||0,appData.budgets.categories[c]||0)}`).join('');
+      const cardNames=[...new Set([...Object.keys(appData.budgets.cards||{}),...Object.keys(cards)])];document.getElementById('card-summary').innerHTML=cardNames.map(c=>`<div class="summary-item"><span>${c}${budgetEditMode?`<button class="remove-account-btn" onclick="removeBudgetCard('${c.replace(/'/g,"\\'")}')">Delete</button>`:''}</span><strong>${money(cards[c]||0)}</strong></div>`).join('');
+      document.getElementById('card-budget-inputs').innerHTML=cardNames.map(c=>`<div class="budget-row"><label>${c} limit</label><input data-budget-card="${c}" type="number" min="0" value="${appData.budgets.cards[c]||0}" ${budgetEditMode?'':'disabled'}></div>${statusBlock(cards[c]||0,appData.budgets.cards[c]||0)}`).join('');
+      const accountNames=allBudgetAccounts(accounts);document.getElementById('account-summary').innerHTML=accountNames.length?accountNames.sort((a,b)=>(accounts[b]||0)-(accounts[a]||0)).map(a=>`<div class="summary-item"><span>${a}${budgetEditMode?`<button class="remove-account-btn" onclick="removeBudgetAccount('${a.replace(/'/g,"\\'")}')">Remove</button>`:''}</span><strong>${money(accounts[a]||0)}</strong></div>`).join(''):'<div style="color:var(--text-muted)">No accounts added yet.</div>';
+      document.getElementById('account-budget-inputs').innerHTML=budgetEditMode?'<div class="edit-budget-note">Set a monthly spending limit for each account.</div>'+accountNames.map(a=>`<div class="editable-spend"><label>${a} limit</label><input data-budget-account="${a}" type="number" min="0" value="${appData.budgets.accounts[a]||0}"></div>`).join(''):accountNames.map(a=>statusBlock(accounts[a]||0,appData.budgets.accounts[a]||0)).join('');
+      if(budgetChart)budgetChart.destroy();const limits=categoryNames.map(c=>appData.budgets.categories[c]||0),spent=categoryNames.map(c=>cats[c]||0);
+      budgetChart=new Chart(document.getElementById('budgetCanvas').getContext('2d'),{type:'bar',data:{labels:categoryNames,datasets:[{label:'Spent (₹)',data:spent,backgroundColor:spent.map((v,i)=>limits[i]&&v>limits[i]?'#6D3434':'#2D5A43'),borderRadius:7},{label:'Budget (₹)',data:limits,backgroundColor:'#A8C3B4',borderRadius:7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{grid:{display:false}},y:{beginAtZero:true}}}});
+    }
+
+    // ================= ANALYTICS CHARTS =================
+    let chartDonut = null;
+    let chartBar = null;
+    let chartAdherence = null;
+
+    function renderAnalytics() {
+      // 1. Donut: Category distribution for current month
+      const targetMonthIdx = MONTHS.indexOf(currentMonth);
+      const catTotals = {};
+      appData.expenses.forEach(e => {
+        const d = new Date(e.date);
+        if (d.getFullYear() === currentYear && d.getMonth() === targetMonthIdx && e.type === 'Expense') {
+          catTotals[e.category] = (catTotals[e.category] || 0) + e.amount;
+        }
+      });
+
+      const donutLabels = Object.keys(catTotals).length ? Object.keys(catTotals) : ['No Expenses'];
+      const donutData = Object.keys(catTotals).length ? Object.values(catTotals) : [1];
+
+      if (chartDonut) chartDonut.destroy();
+      chartDonut = new Chart(document.getElementById('catDonutCanvas').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: donutLabels,
+          datasets: [{
+            data: donutData,
+            backgroundColor: ['#2D5A43','#6D3434','#C87A53','#A8C3B4','#1C2E24','#739984','#8F654F']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 2. Yearly Outflow Bar
+      const yearOutflow = Array(12).fill(0);
+      appData.expenses.forEach(e => {
+        const d = new Date(e.date);
+        if (d.getFullYear() === currentYear && e.type === 'Expense') {
+          yearOutflow[d.getMonth()] += e.amount;
+        }
+      });
+
+      if (chartBar) chartBar.destroy();
+      chartBar = new Chart(document.getElementById('monthBarCanvas').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: MONTHS.map(m => m.slice(0, 3)),
+          datasets: [{
+            label: `Spent in ${currentYear} (₹)`,
+            data: yearOutflow,
+            backgroundColor: '#6D3434',
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 3. Category Adherence
+      const key = `${currentYear}_${currentMonth}`;
+      const sched = appData.schedules[key] || {};
+      const adherence = {};
+
+      Object.entries(appData.categories).forEach(([c, tasks]) => {
+        let done = 0;
+        tasks.forEach(t => {
+          if (sched[t] && sched[t].completed) done++;
+        });
+        adherence[c] = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+      });
+
+      if (chartAdherence) chartAdherence.destroy();
+      chartAdherence = new Chart(document.getElementById('adherenceCanvas').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(adherence),
+          datasets: [{
+            label: '% Completed',
+            data: Object.values(adherence),
+            backgroundColor: Object.values(adherence).map((v,i) => ['#2D5A43','#6D3434','#C87A53','#A8C3B4','#1C2E24'][i % 5]),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { min: 0, max: 100 } }
+        }
+      });
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function renderCurrentTab() {
+      if (currentTab === 'schedule') renderSchedule();
+      else if (currentTab === 'expenses') renderExpenses();
+      else if (currentTab === 'stock') renderStock();
+      else if (currentTab === 'budget') renderBudget();
+      else if (currentTab === 'charts') renderAnalytics();
+    }
+
+
+    // Generative calming ambience: warm pads and delicate bell-like chimes.
+    // Playback begins only after the user presses Play because browsers block autoplay.
+    let calmAudio=null, calmTimer=null, calmPlaying=false;
+    function ambientTone(ctx,dest,freq,start,dur,vol,type='sine'){
+      const osc=ctx.createOscillator(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
+      osc.type=type;osc.frequency.setValueAtTime(freq,start);filter.type='lowpass';filter.frequency.value=950;
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(vol,start+1.6);gain.gain.exponentialRampToValueAtTime(.0001,start+dur);
+      osc.connect(filter);filter.connect(gain);gain.connect(dest);osc.start(start);osc.stop(start+dur+.15);
+    }
+    function softChime(ctx,dest,freq,start){
+      const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=freq;
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.026,start+.04);gain.gain.exponentialRampToValueAtTime(.0001,start+3.6);
+      osc.connect(gain);gain.connect(dest);osc.start(start);osc.stop(start+3.8);
+    }
+    function scheduleCalmMusic(){
+      if(!calmPlaying||!calmAudio)return;
+      const ctx=calmAudio.ctx,now=ctx.currentTime;
+      const chords=[[130.81,196,261.63],[146.83,220,293.66],[164.81,246.94,329.63],[146.83,220,293.66]];
+      chords.forEach((chord,i)=>chord.forEach((f,j)=>ambientTone(ctx,calmAudio.master,f,now+i*6.2,7.8,.012-j*.001,'sine')));
+      [523.25,587.33,659.25,783.99].forEach((f,i)=>softChime(ctx,calmAudio.master,f,now+3+i*5.7));
+      calmTimer=setTimeout(scheduleCalmMusic,23500);
+    }
+    function initCalmAudio(){
+      const AC=window.AudioContext||window.webkitAudioContext,ctx=new AC(),master=ctx.createGain(),compressor=ctx.createDynamicsCompressor();
+      master.gain.value=.72;master.connect(compressor);compressor.connect(ctx.destination);
+      return{ctx,master};
+    }
+    function toggleZenMusic(){
+      const btn=document.getElementById('music-control'),lab=document.getElementById('music-label');
+      if(!calmAudio)calmAudio=initCalmAudio();calmPlaying=!calmPlaying;
+      if(calmPlaying){calmAudio.ctx.resume();scheduleCalmMusic();btn.classList.add('playing');lab.textContent='Pause calming music'}
+      else{clearTimeout(calmTimer);calmAudio.ctx.suspend();btn.classList.remove('playing');lab.textContent='Play calming music'}
+    }
+
+    function applyDarkMode(enabled){
+      document.body.classList.toggle('dark-mode',enabled);
+      document.getElementById('theme-toggle-icon').textContent=enabled?'☀':'☾';
+      document.getElementById('theme-toggle-label').textContent=enabled?'Light mode':'Dark mode';
+      localStorage.setItem('msz_dark_mode',enabled?'1':'0');
+      if(currentTab==='charts')setTimeout(renderAnalytics,80);
+      if(currentTab==='budget')setTimeout(renderBudget,80);
+    }
+    function toggleDarkMode(){applyDarkMode(!document.body.classList.contains('dark-mode'));}
+    function initDarkMode(){
+      const saved=localStorage.getItem('msz_dark_mode');
+      const preferDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyDarkMode(saved===null?preferDark:saved==='1');
+    }
+
+    // Run Initialization
+    initDarkMode();
+    ensureMoneyLists();
+    syncCustomAccountOptions();
+    initMonths();
+    renderCurrentTab();
+  </script>
+ </body>
+</html>
